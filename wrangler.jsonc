@@ -33,6 +33,9 @@
     "ADMIN_EMAIL": "lamh2903@gmail.com",
     "AI_MODEL": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
     "SWEEP_USERS_PER_RUN": "20",
+    "BILLING_PRICE": "10000",
+    "BILLING_CURRENCY": "ARS",
+    "TRIAL_DAYS": "3",
     "DEV_LOG_MAIL": "1"
   },
 

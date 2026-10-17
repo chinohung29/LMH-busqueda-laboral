@@ -7,7 +7,7 @@ import { sweepUser, runDailySweep } from '../src/sweep.js';
 
 function makeDb() {
   const db = new DatabaseSync(':memory:');
-  db.exec(readFileSync(new URL('../migrations/0001_init.sql', import.meta.url), 'utf8'));
+  for (const f of ['0001_init.sql', '0002_billing.sql']) db.exec(readFileSync(new URL(`../migrations/${f}`, import.meta.url), 'utf8'));
   const wrap = (sql, args = []) => ({
     bind: (...a) => wrap(sql, a),
     first: async () => db.prepare(sql).get(...args) ?? null,
@@ -97,4 +97,27 @@ test('cron diario: solo procesa a quienes no se actualizaron hoy', async () => {
   const callsFirst = calls;
   await runDailySweep(env);
   assert.equal(calls, callsFirst, 'la segunda corrida del día no repite el trabajo');
+});
+
+test('cron: quien no tiene prueba vigente ni suscripción no se barre (y no ocupa lugar en la tanda)', async () => {
+  const { env, DB } = setup();
+  let calls = 0;
+  globalThis.fetch = async () => { calls++; return new Response(JSON.stringify(jobs([])), { status: 200 }); };
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' }).format(new Date());
+  DB.raw.prepare("UPDATE profiles SET last_sweep_date=? WHERE user_id='u2'").run(today);
+  DB.raw.prepare("INSERT INTO subscriptions (user_id, trial_started_at, trial_ends_at, updated_at) VALUES ('u1', 1, 2, 1)").run();
+  await runDailySweep(env);
+  assert.equal(calls, 0, 'no se consultó ningún portal para un usuario sin acceso');
+  assert.equal(DB.raw.prepare("SELECT last_sweep_date d FROM profiles WHERE user_id='u1'").get().d, today, 'queda marcado para no reintentar en cada corrida');
+});
+test('cron: con la prueba vigente sí se barre', async () => {
+  const { env, DB } = setup();
+  let calls = 0;
+  globalThis.fetch = async () => { calls++; return new Response(JSON.stringify(jobs([])), { status: 200 }); };
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' }).format(new Date());
+  DB.raw.prepare("UPDATE profiles SET last_sweep_date=? WHERE user_id='u2'").run(today);
+  await runDailySweep(env);
+  assert.ok(calls > 0);
+  const sub = DB.raw.prepare("SELECT trial_ends_at - trial_started_at AS d FROM subscriptions WHERE user_id='u1'").get();
+  assert.equal(sub.d, 3 * 86400, 'la prueba creada dura 3 días');
 });

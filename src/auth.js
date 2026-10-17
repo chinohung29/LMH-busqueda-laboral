@@ -3,6 +3,7 @@ import {
   TERMS_VERSION, json, fail, sha256, randomToken, hashPassword, safeEqualHex, nowSec, isEmail,
   parseCookies, clientIp, rateLimit, sendMail, mailLayout, esc,
 } from './util.js';
+import { cancelForDeletion } from './billing.js';
 
 const SESSION_DAYS = 30;
 const VERIFY_HOURS = 48;
@@ -172,10 +173,12 @@ export async function deleteAccount(env, request, user) {
   const row = await env.DB.prepare('SELECT pass_hash, pass_salt FROM users WHERE id = ?').bind(user.id).first();
   const calc = await hashPassword(String(body.password || ''), row?.pass_salt);
   if (!row || !safeEqualHex(calc.hash, row.pass_hash)) return fail('La contraseña no coincide.', 403);
+  await cancelForDeletion(env, user.id);
   const prof = await env.DB.prepare('SELECT cv_key FROM profiles WHERE user_id = ?').bind(user.id).first();
   if (prof?.cv_key) await env.CVS.delete(prof.cv_key);
   await env.DB.batch([
     env.DB.prepare('DELETE FROM offers WHERE user_id = ?').bind(user.id),
+    env.DB.prepare('DELETE FROM subscriptions WHERE user_id = ?').bind(user.id),
     env.DB.prepare('DELETE FROM profiles WHERE user_id = ?').bind(user.id),
     env.DB.prepare('DELETE FROM tokens WHERE user_id = ?').bind(user.id),
     env.DB.prepare('DELETE FROM sessions WHERE user_id = ?').bind(user.id),

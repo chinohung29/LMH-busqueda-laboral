@@ -2,6 +2,7 @@
 import { json, fail, nowSec, safeJsonParse, cleanUrl, rateLimit, clientIp, isEmail, randomToken, sendMail, mailLayout, esc } from './util.js';
 import { analyzeCv, blocksOf } from './ai.js';
 import { sweepUser, dedupeKey } from './sweep.js';
+import * as billing from './billing.js';
 
 const WORK_MODES = ['presencial', 'hibrido', 'remoto', 'indiferente'];
 const SCHEDULES = ['part_time', 'full_time', 'freelancer'];
@@ -32,7 +33,7 @@ const getProfile = (env, userId) => env.DB.prepare('SELECT * FROM profiles WHERE
 
 export async function me(env, user) {
   const p = await getProfile(env, user.id);
-  return json({ user: { email: user.email }, profile: profileView(p) });
+  return json({ user: { email: user.email }, profile: profileView(p), billing: await billing.view(env, user.id) });
 }
 
 export async function updateProfile(env, request, user) {

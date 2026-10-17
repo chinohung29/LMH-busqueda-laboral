@@ -2,6 +2,7 @@
 import { sha256, nowSec, todayART, safeJsonParse } from './util.js';
 import { blocksOf } from './ai.js';
 import { CONNECTORS } from './sources.js';
+import { hasAccess } from './billing.js';
 
 export const MAX_AGE_DAYS = 15;
 const MAX_NEW_PER_BLOCK = 15;
@@ -141,6 +142,10 @@ export async function runDailySweep(env) {
   ).bind(today, limit).all();
   for (const row of results) {
     try {
+      if (!(await hasAccess(env, row.user_id))) {   // sin prueba ni suscripción: no se gasta el barrido
+        await env.DB.prepare('UPDATE profiles SET last_sweep_date = ?, last_sweep_at = ? WHERE user_id = ?').bind(today, nowSec(), row.user_id).run();
+        continue;
+      }
       await sweepUser(env, row.user_id, { today });
     } catch (err) {
       console.error(JSON.stringify({ evt: 'sweep_error', userId: row.user_id, msg: String(err?.message || err) }));

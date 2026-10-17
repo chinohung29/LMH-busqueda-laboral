@@ -2,7 +2,7 @@
 'use strict';
 
 const root = document.getElementById('root');
-const state = { user: null, profile: null, blocks: [], offers: [], block: 'A', poll: null };
+const state = { user: null, profile: null, blocks: [], offers: [], block: 'A', poll: null, billing: null, notice: '' };
 
 /* ---------- utilidades ---------- */
 function h(tag, attrs, ...kids) {
@@ -27,6 +27,7 @@ async function api(path, { method = 'GET', body, form } = {}) {
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     if (res.status === 401 && state.user) { state.user = null; render(); }
+    if (res.status === 402 && state.billing) { state.billing = { ...state.billing, access: false, state: state.billing.state === 'pending' ? 'pending' : 'expired' }; render(); }
     const err = new Error(data.error || 'Ocurrió un error. Probá de nuevo.');
     err.status = res.status;
     throw err;
@@ -253,6 +254,68 @@ function viewWizard() {
 }
 
 /* ---------- barra superior y navegación ---------- */
+/* ---------- suscripción ---------- */
+const money = (n, cur) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: cur || 'ARS', maximumFractionDigits: 0 }).format(n);
+const fmtEpoch = (sec) => new Date(sec * 1000).toLocaleDateString('es-AR');
+async function startCheckout(btn) {
+  btn.disabled = true;
+  try { location.href = (await api('/api/billing/checkout', { method: 'POST' })).url; }
+  catch (e) { btn.disabled = false; alert(e.message); }
+}
+async function refreshBilling(btn) {
+  btn.disabled = true;
+  try { state.billing = (await api('/api/billing/refresh', { method: 'POST' })).billing; if (state.billing.access) await loadAll(); render(); }
+  catch (e) { alert(e.message); } finally { btn.disabled = false; }
+}
+async function cancelSub() {
+  if (!confirm('¿Cancelar la suscripción? Vas a poder seguir usando LMH Empleo hasta el final del período que ya pagaste.')) return;
+  try { state.billing = (await api('/api/billing/cancel', { method: 'POST' })).billing; render(); } catch (e) { alert(e.message); }
+}
+function action(label, fn, cls) { const b = h('button', cls ? { class: cls } : {}, label); b.onclick = () => fn(b); return b; }
+function billingBanner() {
+  const b = state.billing;
+  if (!b) return null;
+  if (state.notice) { const n = state.notice; state.notice = ''; return h('p', { class: 'msg ok' }, n); }
+  if (b.state === 'trial') {
+    return h('div', { class: 'card banner' },
+      h('div', {}, h('strong', {}, b.trial_days_left === 1 ? 'Prueba gratis: te queda 1 día.' : `Prueba gratis: te quedan ${b.trial_days_left} días.`),
+        h('span', { class: 'muted' }, ` Después son ${money(b.price, b.currency)} por mes y cancelás cuando quieras.`)),
+      action('Suscribirme', startCheckout, 'primary'));
+  }
+  if (b.state === 'cancelling' || b.state === 'paused') return h('p', { class: 'msg' }, `Tu suscripción está ${b.state === 'paused' ? 'pausada' : 'cancelada'}. Podés usar LMH Empleo hasta el ${fmtEpoch(b.paid_until)}.`);
+  return null;
+}
+function viewPaywall() {
+  const b = state.billing;
+  const pending = b.state === 'pending';
+  const n = state.notice; state.notice = '';
+  return h('div', { class: 'auth paywall' },
+    n ? h('p', { class: 'msg ok' }, n) : null,
+    h('div', { class: 'card' },
+      h('h1', {}, pending ? 'Esperando la confirmación del pago' : 'Terminó tu prueba gratuita'),
+      pending
+        ? h('p', { class: 'sub' }, 'Todavía no recibimos la confirmación de Mercado Pago. Si ya pagaste, puede demorar unos minutos: tocá «Actualizar estado».')
+        : h('p', { class: 'sub' }, `Para seguir recibiendo tus ofertas todos los días, suscribite por ${money(b.price, b.currency)} al mes. Tu CV y tus ofertas guardadas se conservan.`),
+      h('p', { class: 'price' }, money(b.price, b.currency), h('span', { class: 'muted' }, ' / mes')),
+      b.payments_enabled ? null : h('p', { class: 'msg err' }, 'Los pagos todavía no están disponibles. Probá más tarde.'),
+      h('p', {}, b.payments_enabled ? action(pending ? 'Reintentar el pago' : 'Suscribirme con Mercado Pago', startCheckout, 'primary') : null, ' ', action('Actualizar estado', refreshBilling)),
+      h('p', { class: 'muted' }, 'Pagás con Mercado Pago. Cancelás cuando quieras desde tu perfil.')));
+}
+function subscriptionCard() {
+  const b = state.billing;
+  if (!b) return null;
+  const price = money(b.price, b.currency);
+  const lines = {
+    trial: `Prueba gratis hasta el ${fmtEpoch(b.trial_ends_at)}. Después ${price} por mes.`,
+    active: `Suscripción activa: ${price} por mes.${b.paid_until ? ` Próximo cobro: ${fmtEpoch(b.paid_until)}.` : ''}`,
+    cancelling: `Suscripción cancelada. Tenés acceso hasta el ${b.paid_until ? fmtEpoch(b.paid_until) : 'final del período pago'}.`,
+    paused: 'Suscripción pausada.',
+  };
+  return h('div', { class: 'card' }, h('h2', {}, 'Mi suscripción'), h('p', {}, lines[b.state] || ''),
+    h('p', {}, b.state !== 'active' && b.payments_enabled ? action(`Suscribirme por ${price}/mes`, startCheckout, 'primary') : null, ' ',
+      action('Actualizar estado', refreshBilling), ' ', b.can_cancel ? action('Cancelar suscripción', cancelSub, 'danger') : null));
+}
+
 function topBar() {
   const right = h('div', { class: 'right' }, arrepentimientoBtn());
   if (window.lmhInstall && window.lmhInstall.canPrompt()) right.append(h('button', { onclick: () => window.lmhInstall.prompt() }, 'Instalar app'));
@@ -372,6 +435,7 @@ function viewProfile() {
       p.cv_name ? h('p', {}, h('button', { onclick: async () => { try { await api('/api/cv/reanalyze', { method: 'POST' }); await refreshMe(); location.hash = '#/ofertas'; } catch (e) { alert(e.message); } } }, 'Volver a analizar el CV')) : null),
     h('div', { class: 'card' }, h('h2', {}, 'Qué estoy buscando'), prefsForm(p)),
     h('div', { class: 'card' }, h('h2', {}, 'Mi bloque de búsqueda'), customBlockForm(p)),
+    subscriptionCard(),
     h('div', { class: 'card' }, h('h2', {}, 'Mi cuenta'), h('p', { class: 'muted' }, state.user.email),
       h('p', {}, h('button', { class: 'danger', onclick: del }, 'Borrar mi cuenta y mis datos'))));
 }
@@ -424,7 +488,7 @@ function viewHelp() {
 /* ---------- arranque ---------- */
 async function refreshMe() {
   const d = await api('/api/me');
-  state.user = d.user; state.profile = d.profile;
+  state.user = d.user; state.profile = d.profile; state.billing = d.billing;
   schedulePoll();
 }
 async function loadAll() {
@@ -446,12 +510,13 @@ function render() {
   clearTimeout(state.poll);
   root.replaceChildren();
   if (!state.user) { root.append(viewAuth()); return; }
+  if (state.billing && !state.billing.access) { root.append(topBar(), viewPaywall(), siteFooter()); return; }
   schedulePoll();
   if (!state.profile.onboarded) { root.append(viewWizard()); return; }
   const r = route()[0] || 'ofertas';
   const views = { ofertas: viewOffers, enviadas: viewSent, descartadas: viewDiscarded, perfil: viewProfile, ayuda: viewHelp };
   const cur = views[r] ? r : 'ofertas';
-  root.append(topBar(), navTabs(cur), views[cur](), siteFooter());
+  root.append(...[topBar(), navTabs(cur), billingBanner(), views[cur](), siteFooter()].filter(Boolean));
   if (!state.profile.tutorial_done && !document.querySelector('.overlay')) showTutorial();
 }
 
@@ -463,9 +528,18 @@ function hideSplash() {
 }
 
 async function boot() {
+  const returning = location.pathname === '/suscripcion';   // vuelta desde Mercado Pago
+  if (returning) history.replaceState(null, '', '/#/perfil');
   try {
     await refreshMe();
-    await loadAll();
+    if (returning) {
+      try {
+        state.billing = (await api('/api/billing/refresh', { method: 'POST' })).billing;
+        state.notice = state.billing.state === 'active' ? '¡Listo! Tu suscripción está activa.'
+          : 'Estamos esperando la confirmación de Mercado Pago. Si ya pagaste, tocá «Actualizar estado» en un minuto.';
+      } catch { /* se puede reintentar desde «Actualizar estado» */ }
+    }
+    if (state.billing?.access) await loadAll();
   } catch { state.user = null; }
   render();
   hideSplash();
