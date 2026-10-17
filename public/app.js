@@ -455,12 +455,20 @@ function render() {
   if (!state.profile.tutorial_done && !document.querySelector('.overlay')) showTutorial();
 }
 
+// Pantalla de carga (solo celular): se muestra un mínimo de 1,5 s y se desvanece al aparecer la primera vista.
+function hideSplash() {
+  const el = document.getElementById('splash');
+  if (!el) return;
+  setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 600); }, Math.max(0, 1500 - performance.now()));
+}
+
 async function boot() {
   try {
     await refreshMe();
     await loadAll();
   } catch { state.user = null; }
   render();
+  hideSplash();
 }
 
 window.addEventListener('hashchange', render);

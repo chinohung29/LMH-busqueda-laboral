@@ -151,3 +151,29 @@ footer.site .links { display: flex; gap: 14px; flex-wrap: wrap; }
 }
 .theme-toggle:hover { color: var(--brand); border-color: var(--brand); }
 @media print { .theme-toggle { display: none; } }
+
+/* Pantalla de carga del celular: logo con animación hasta que aparece el inicio de sesión (ver hideSplash en app.js) */
+#splash { display: none; }
+@media (max-width: 700px) {
+  #splash {
+    position: fixed; inset: 0; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 28px;
+    background: #030E1F;
+    transition: opacity .45s ease, visibility .45s ease;
+    animation: splash-failsafe 0s 8s forwards;
+  }
+  #splash img { width: min(300px, 74vw); height: auto; animation: splash-logo .9s cubic-bezier(.2,.7,.2,1) both, splash-glow 2.4s ease-in-out .9s infinite; }
+  #splash .bar { width: 132px; height: 3px; border-radius: 3px; background: rgba(200,206,216,.16); overflow: hidden; animation: splash-fade .6s .4s both; }
+  #splash .bar i { display: block; width: 45%; height: 100%; border-radius: 3px; background: linear-gradient(90deg, transparent, #7FA6E3, #C8CED8); animation: splash-bar 1.2s ease-in-out infinite; }
+  #splash.out { opacity: 0; visibility: hidden; pointer-events: none; }
+  .auth { animation: rise .55s ease-out both; }
+}
+@keyframes splash-logo { from { opacity: 0; transform: scale(.88); filter: blur(6px); } to { opacity: 1; transform: none; filter: none; } }
+@keyframes splash-glow { 0%, 100% { filter: drop-shadow(0 0 0 rgba(127,166,227,0)); } 50% { filter: drop-shadow(0 0 18px rgba(127,166,227,.45)); } }
+@keyframes splash-bar { from { transform: translateX(-110%); } to { transform: translateX(260%); } }
+@keyframes splash-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes splash-failsafe { to { opacity: 0; visibility: hidden; pointer-events: none; } }
+@media (prefers-reduced-motion: reduce) {
+  #splash img, #splash .bar, #splash .bar i, .auth { animation: none; }
+  #splash .bar i { width: 100%; }
+}
