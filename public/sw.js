@@ -1,6 +1,6 @@
 // Service worker: guarda el "cascarón" de la app. La API siempre va a la red.
-const VERSION = 'v1';
-const SHELL = ['/', '/index.html', '/styles.css', '/app.js', '/cv.js', '/manifest.webmanifest', '/icons/icon-192.png',
+const VERSION = 'v2';
+const SHELL = ['/', '/index.html', '/styles.css', '/app.js', '/cv.js', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/logo-wide.png',
   '/terminos.html', '/privacidad.html', '/arrepentimiento.html', '/legal.css', '/arrepentimiento.js'];
 
 self.addEventListener('install', (e) => {

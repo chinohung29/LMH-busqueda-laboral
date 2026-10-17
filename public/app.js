@@ -73,7 +73,7 @@ function siteFooter() {
     h('span', {}, 'LMH Empleo · una app de LMH Apps'));
 }
 function brand() {
-  return h('a', { class: 'brand', href: '#/' }, h('img', { src: '/icons/icon-192.png', alt: '' }), h('span', {}, 'LMH Empleo', h('small', {}, 'por LMH Apps')));
+  return h('a', { class: 'brand', href: '#/' }, h('img', { src: '/icons/logo-wide.png', alt: 'LMH' }), h('span', {}, 'LMH Empleo', h('small', {}, 'por LMH Apps')));
 }
 
 /* ---------- acceso ---------- */
@@ -136,6 +136,7 @@ function viewAuth() {
   return h('div', {},
     h('div', { class: 'top' }, brand(), h('div', { class: 'right' }, arrepentimientoBtn())),
     h('div', { class: 'auth' },
+      h('img', { class: 'brand-hero', src: '/icons/logo-wide.png', alt: 'LMH Apps' }),
       h('h1', {}, 'Tu búsqueda laboral, en tres bloques y sin repetidos'),
       h('p', { class: 'sub' }, 'Subí tu CV y nuestros agentes lo leen, buscan ofertas de empleo en Argentina que encajan con tu perfil y las actualizan todos los días después de las 7:00.'),
       h('div', { class: 'card' }, tabs, box)),
