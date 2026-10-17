@@ -14,7 +14,7 @@
   },
 
   "d1_databases": [
-    { "binding": "DB", "database_name": "lmh-empleo", "database_id": "REEMPLAZAR_CON_EL_ID_DE_D1", "migrations_dir": "migrations" }
+    { "binding": "DB", "database_name": "lmh-empleo", "database_id": "d25974e6-c8ff-461f-a6c1-fa4d6e6a1dae", "migrations_dir": "migrations" }
   ],
   "r2_buckets": [
     { "binding": "CVS", "bucket_name": "lmh-empleo-cvs" }
