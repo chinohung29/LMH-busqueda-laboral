@@ -177,3 +177,23 @@ footer.site .links { display: flex; gap: 14px; flex-wrap: wrap; }
   #splash img, #splash .bar, #splash .bar i, .auth { animation: none; }
   #splash .bar i { width: 100%; }
 }
+
+/* Aviso de instalación (ver install.js) */
+.install-banner {
+  position: fixed; z-index: 45; left: 16px; bottom: 16px; width: min(340px, calc(100vw - 32px));
+  display: grid; grid-template-columns: 44px 1fr; gap: 6px 12px; align-items: start;
+  background: var(--card); color: var(--ink); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 14px;
+  animation: rise .45s ease-out both;
+}
+.install-banner img { width: 44px; height: 44px; border-radius: 10px; }
+.install-banner strong { font-family: var(--serif); font-size: 16px; display: block; }
+.install-banner p { margin: 2px 0 0; font-size: 13px; color: var(--ink-soft); }
+.install-banner .act { grid-column: 1 / -1; display: flex; gap: 12px; align-items: center; justify-content: flex-end; }
+.install-banner .act [hidden] { display: none; }
+@media (max-width: 700px) {
+  .install-banner { left: 12px; right: 12px; width: auto; bottom: max(12px, env(safe-area-inset-bottom)); }
+  body.has-install .theme-toggle { bottom: calc(max(12px, env(safe-area-inset-bottom)) + 150px); }
+  body.has-install .wrap { padding-bottom: 190px; }
+}
+@media (prefers-reduced-motion: reduce) { .install-banner { animation: none; } }
+@media print { .install-banner { display: none; } }

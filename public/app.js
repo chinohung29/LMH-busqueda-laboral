@@ -2,7 +2,7 @@
 'use strict';
 
 const root = document.getElementById('root');
-const state = { user: null, profile: null, blocks: [], offers: [], block: 'A', poll: null, installEvt: null };
+const state = { user: null, profile: null, blocks: [], offers: [], block: 'A', poll: null };
 
 /* ---------- utilidades ---------- */
 function h(tag, attrs, ...kids) {
@@ -255,7 +255,7 @@ function viewWizard() {
 /* ---------- barra superior y navegación ---------- */
 function topBar() {
   const right = h('div', { class: 'right' }, arrepentimientoBtn());
-  if (state.installEvt) right.append(h('button', { onclick: async () => { state.installEvt.prompt(); state.installEvt = null; render(); } }, 'Instalar app'));
+  if (window.lmhInstall && window.lmhInstall.canPrompt()) right.append(h('button', { onclick: () => window.lmhInstall.prompt() }, 'Instalar app'));
   right.append(h('button', { onclick: async () => { await api('/api/auth/logout', { method: 'POST' }).catch(() => {}); state.user = null; state.profile = null; render(); } }, 'Salir'));
   return h('div', { class: 'top' }, brand(), right);
 }
@@ -472,6 +472,6 @@ async function boot() {
 }
 
 window.addEventListener('hashchange', render);
-window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); state.installEvt = e; if (state.user) render(); });
+window.addEventListener('lmh-install-change', () => { if (state.user) render(); });
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
 boot();
