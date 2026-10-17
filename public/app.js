@@ -279,7 +279,7 @@ function billingBanner() {
   if (b.state === 'trial') {
     return h('div', { class: 'card banner' },
       h('div', {}, h('strong', {}, b.trial_days_left === 1 ? 'Prueba gratis: te queda 1 día.' : `Prueba gratis: te quedan ${b.trial_days_left} días.`),
-        h('span', { class: 'muted' }, ` Después son ${money(b.price, b.currency)} por mes y cancelás cuando quieras.`)),
+        h('span', { class: 'muted' }, ` Al suscribirte se cobra ${money(b.price, b.currency)} en el momento y después una vez por mes; cancelás cuando quieras.`)),
       action('Suscribirme', startCheckout, 'primary'));
   }
   if (b.state === 'cancelling' || b.state === 'paused') return h('p', { class: 'msg' }, `Tu suscripción está ${b.state === 'paused' ? 'pausada' : 'cancelada'}. Podés usar LMH Empleo hasta el ${fmtEpoch(b.paid_until)}.`);

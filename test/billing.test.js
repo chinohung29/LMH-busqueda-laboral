@@ -60,13 +60,13 @@ function mockFetch(handler) {
 }
 const user = { id: 'u-1', email: 'ana@test.com' };
 
-test('checkout: crea la suscripción mensual de $10.000 con los días de prueba que quedan', async () => {
-  const { env, db } = fakeEnv({ user_id: 'u-1', trial_ends_at: Math.floor(Date.now() / 1000) + 2 * DAY - 60, mp_status: null });
+test('checkout: cobro inmediato (sin período diferido) de $10.000 por mes', async () => {
+  const { env, db } = fakeEnv({ user_id: 'u-1', trial_ends_at: Math.floor(Date.now() / 1000) + 2 * DAY, mp_status: null });
   const m = mockFetch(() => ({ status: 201, body: { id: 'pre-1', status: 'pending', init_point: 'https://mp.test/checkout?preapproval_id=pre-1' } }));
   try {
     const res = await checkout(env, new Request('https://app.test/api/billing/checkout', { method: 'POST' }), user);
-    const data = await res.json();
-    assert.equal(data.url, 'https://mp.test/checkout?preapproval_id=pre-1');
+    assert.equal((await res.json()).url, 'https://mp.test/checkout?preapproval_id=pre-1');
+    assert.equal(m.calls.length, 1);
     const c = m.calls[0];
     assert.equal(c.url, 'https://api.mercadopago.com/preapproval');
     assert.equal(c.auth, 'Bearer TEST-token');
@@ -74,19 +74,9 @@ test('checkout: crea la suscripción mensual de $10.000 con los días de prueba 
     assert.equal(c.body.payer_email, 'ana@test.com');
     assert.equal(c.body.status, 'pending');
     assert.equal(c.body.back_url, 'https://app.test/suscripcion');
-    assert.deepEqual(c.body.auto_recurring, { frequency: 1, frequency_type: 'months', transaction_amount: 10000, currency_id: 'ARS', free_trial: { frequency: 2, frequency_type: 'days' } });
+    assert.deepEqual(c.body.auto_recurring, { frequency: 1, frequency_type: 'months', transaction_amount: 10000, currency_id: 'ARS' });
+    assert.equal(c.body.auto_recurring.free_trial, undefined, 'aunque queden días de prueba, no se difiere el primer cobro');
     assert.equal(db.row.mp_preapproval_id, 'pre-1');
-  } finally { m.restore(); }
-});
-test('checkout: si Mercado Pago rechaza free_trial reintenta sin él', async () => {
-  const { env } = fakeEnv({ user_id: 'u-1', trial_ends_at: Math.floor(Date.now() / 1000) + DAY, mp_status: null });
-  let n = 0;
-  const m = mockFetch((c) => (++n === 1 ? { status: 400, body: { message: 'free_trial no soportado' } } : { status: 201, body: { id: 'pre-2', status: 'pending', init_point: 'https://mp.test/x' } }));
-  try {
-    const res = await checkout(env, new Request('https://app.test/x', { method: 'POST' }), user);
-    assert.equal((await res.json()).url, 'https://mp.test/x');
-    assert.equal(m.calls.length, 2);
-    assert.equal(m.calls[1].body.auto_recurring.free_trial, undefined);
   } finally { m.restore(); }
 });
 test('checkout: sin credenciales responde 503 y ya suscripto responde error', async () => {

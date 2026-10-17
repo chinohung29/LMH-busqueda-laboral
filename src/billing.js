@@ -92,11 +92,11 @@ export async function syncPreapproval(env, preapprovalId) {
 export async function checkout(env, request, user) {
   if (!env.MP_ACCESS_TOKEN) return fail('Los pagos todavía no están disponibles. Probá más tarde.', 503);
   if (!(await rateLimit(env, `checkout:${user.id}`, 10, 3600))) return fail('Demasiados intentos. Probá de nuevo en un rato.', 429);
-  const now = nowSec();
-  const sub = await ensureSub(env, user.id, now);
+  const sub = await ensureSub(env, user.id);
   if (sub.mp_status === 'authorized') return fail('Ya tenés una suscripción activa.');
   const { price, currency } = settings(env);
-  const trialLeft = now < sub.trial_ends_at ? Math.ceil((sub.trial_ends_at - now) / DAY) : 0;
+  // El primer cobro es al suscribirse (eso habilita la suscripción) y después uno por mes.
+  // Los días de prueba que queden se pierden a propósito: no se difiere el cobro.
   const body = {
     reason: 'LMH Empleo — suscripción mensual',
     external_reference: user.id,
@@ -105,19 +105,9 @@ export async function checkout(env, request, user) {
     status: 'pending',
     auto_recurring: { frequency: 1, frequency_type: 'months', transaction_amount: price, currency_id: currency },
   };
-  // Si le quedan días de prueba, el primer cobro se difiere para no perderlos.
-  if (trialLeft > 0) body.auto_recurring.free_trial = { frequency: trialLeft, frequency_type: 'days' };
   let pa;
   try {
-    try {
-      pa = await mp(env, 'POST', '/preapproval', body);
-    } catch (err) {
-      if (err.status === 400 && body.auto_recurring.free_trial) {
-        console.error(JSON.stringify({ evt: 'mp_free_trial_rejected', msg: err.message }));
-        delete body.auto_recurring.free_trial;
-        pa = await mp(env, 'POST', '/preapproval', body);
-      } else throw err;
-    }
+    pa = await mp(env, 'POST', '/preapproval', body);
   } catch (err) {
     console.error(JSON.stringify({ evt: 'mp_checkout_error', msg: String(err.message) }));
     return fail(`No pudimos iniciar el pago. ${String(err.message).slice(0, 300)}`, 502);
