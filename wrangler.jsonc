@@ -20,7 +20,8 @@
     { "binding": "CVS", "bucket_name": "lmh-empleo-cvs" }
   ],
   "ai": { "binding": "AI" },
-  "send_email": [ { "name": "EMAIL" } ],
+  // Sin dominio propio todavía: sin binding de email, los enlaces de validación se escriben en los logs (DEV_LOG_MAIL=1).
+  // Cuando haya dominio: restaurar  "send_email": [ { "name": "EMAIL" } ],  y DEV_LOG_MAIL=0.
 
   // 10:05 a 13:05 UTC = 07:05 a 10:05 en Argentina (UTC-3, sin horario de verano).
   // Cada ejecución procesa a quienes todavía no se actualizaron hoy; así se reparte la carga.
@@ -32,7 +33,7 @@
     "ADMIN_EMAIL": "lamh2903@gmail.com",
     "AI_MODEL": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
     "SWEEP_USERS_PER_RUN": "20",
-    "DEV_LOG_MAIL": "0"
+    "DEV_LOG_MAIL": "1"
   },
 
   "observability": {
