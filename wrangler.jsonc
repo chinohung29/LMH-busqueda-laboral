@@ -28,7 +28,7 @@
   "triggers": { "crons": ["5 10-13 * * *"] },
 
   "vars": {
-    "APP_URL": "https://empleo.lmhapps.com",
+    "APP_URL": "https://lmh-empleo.lamh2903.workers.dev",
     "MAIL_FROM": "no-reply@lmhapps.com",
     "ADMIN_EMAIL": "lamh2903@gmail.com",
     "AI_MODEL": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
