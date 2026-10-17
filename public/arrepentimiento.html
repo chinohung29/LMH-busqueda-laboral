@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="es-AR"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Botón de arrepentimiento — LMH Empleo</title>
+<link rel="stylesheet" href="/legal.css"><link rel="icon" href="/icons/icon-192.png">
+</head><body><main class="legal">
+<p><a href="/">← Volver a LMH Empleo</a></p>
+<h1>Botón de arrepentimiento</h1>
+<p>Si contrataste un servicio de LMH Empleo a distancia, podés revocar la aceptación dentro de los <b>10 días corridos</b> desde la contratación, sin costo y sin necesidad de explicar los motivos (art. 34, Ley 24.240 de Defensa del Consumidor y Resolución 424/2020).</p>
+<p>Completá el formulario. Te enviamos una constancia por email con un código de seguimiento.</p>
+
+<form id="f" class="card" novalidate>
+  <label for="full_name">Nombre y apellido</label>
+  <input id="full_name" type="text" maxlength="120" required autocomplete="name">
+  <label for="email">Email (el de tu cuenta o el de contacto)</label>
+  <input id="email" type="email" required autocomplete="email">
+  <label for="service">Servicio o plan contratado</label>
+  <input id="service" type="text" maxlength="160" required placeholder="Ej: LMH Empleo, plan mensual">
+  <label for="contracted_on">Fecha de contratación (opcional)</label>
+  <input id="contracted_on" type="date">
+  <label for="comment">Comentario (opcional)</label>
+  <textarea id="comment" rows="3" maxlength="1000"></textarea>
+  <p id="out" class="msg" hidden></p>
+  <p><button class="primary" type="submit" id="send">Confirmar arrepentimiento</button></p>
+</form>
+<div id="done" class="card" hidden></div>
+
+<footer class="site"><div class="links"><a href="/terminos.html">Términos y Condiciones</a><a href="/privacidad.html">Política de Privacidad</a><a href="/arrepentimiento.html">Botón de arrepentimiento</a></div></footer>
+</main>
+<script src="/arrepentimiento.js"></script>
+</body></html>

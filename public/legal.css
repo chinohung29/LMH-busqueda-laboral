@@ -1,0 +1,7 @@
+@import url('/styles.css');
+.legal { max-width: 760px; margin: 0 auto; padding: 24px 20px 60px; }
+.legal h1 { margin-top: 8px; }
+.legal h2 { margin-top: 28px; font-size: 18px; }
+.legal p, .legal li { max-width: 68ch; }
+.legal .draft { border-left: 3px solid var(--pendiente); background: var(--pendiente-bg); color: var(--ink); padding: 8px 12px; font-size: 13px; margin: 14px 0; }
+.legal mark { background: var(--pendiente-bg); color: var(--ink); padding: 0 3px; }
