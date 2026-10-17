@@ -121,3 +121,15 @@ test('webhook: ignora ids inválidos y nunca falla por contenido no confiable', 
     assert.equal(m.calls.length, 0);
   } finally { m.restore(); }
 });
+
+test('checkout: si Mercado Pago rechaza el pedido, se informa el motivo (502) y no un error interno', async () => {
+  const { env } = fakeEnv({ user_id: 'u-1', trial_ends_at: 0, mp_status: null });
+  const m = mockFetch(() => ({ status: 403, body: { message: 'Invalid users involved', cause: [{ code: 'invalid_users', description: 'Los usuarios no son del mismo tipo' }] } }));
+  try {
+    const res = await checkout(env, new Request('https://app.test/x', { method: 'POST' }), user);
+    assert.equal(res.status, 502);
+    const msg = (await res.json()).error;
+    assert.match(msg, /Mercado Pago 403: Invalid users involved/);
+    assert.match(msg, /Los usuarios no son del mismo tipo/);
+  } finally { m.restore(); }
+});

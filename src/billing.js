@@ -64,7 +64,8 @@ async function mp(env, method, path, body) {
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const err = new Error(`Mercado Pago ${res.status}: ${data.message || data.error || 'error'}`);
+    const cause = Array.isArray(data.cause) && data.cause[0] ? (data.cause[0].description || data.cause[0].code) : '';
+    const err = new Error(`Mercado Pago ${res.status}: ${[data.message || data.error || 'error', cause].filter(Boolean).join(' — ')}`);
     err.status = res.status;
     throw err;
   }
@@ -108,13 +109,18 @@ export async function checkout(env, request, user) {
   if (trialLeft > 0) body.auto_recurring.free_trial = { frequency: trialLeft, frequency_type: 'days' };
   let pa;
   try {
-    pa = await mp(env, 'POST', '/preapproval', body);
-  } catch (err) {
-    if (err.status === 400 && body.auto_recurring.free_trial) {
-      console.error(JSON.stringify({ evt: 'mp_free_trial_rejected', msg: err.message }));
-      delete body.auto_recurring.free_trial;
+    try {
       pa = await mp(env, 'POST', '/preapproval', body);
-    } else throw err;
+    } catch (err) {
+      if (err.status === 400 && body.auto_recurring.free_trial) {
+        console.error(JSON.stringify({ evt: 'mp_free_trial_rejected', msg: err.message }));
+        delete body.auto_recurring.free_trial;
+        pa = await mp(env, 'POST', '/preapproval', body);
+      } else throw err;
+    }
+  } catch (err) {
+    console.error(JSON.stringify({ evt: 'mp_checkout_error', msg: String(err.message) }));
+    return fail(`No pudimos iniciar el pago. ${String(err.message).slice(0, 300)}`, 502);
   }
   if (!pa?.init_point) return fail('Mercado Pago no devolvió el enlace de pago. Probá de nuevo.', 502);
   await env.DB.prepare('UPDATE subscriptions SET mp_preapproval_id = ?, mp_status = ?, payer_email = ?, updated_at = ? WHERE user_id = ?')
