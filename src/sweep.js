@@ -5,7 +5,7 @@ import { CONNECTORS } from './sources.js';
 
 export const MAX_AGE_DAYS = 15;
 const MAX_NEW_PER_BLOCK = 15;
-const MAX_QUERIES_PER_BLOCK = 3;
+const MAX_QUERIES_PER_BLOCK = 5;
 
 const norm = (s) => String(s ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
 
