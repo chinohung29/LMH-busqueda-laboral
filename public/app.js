@@ -482,7 +482,8 @@ function viewHelp() {
     sec('Actualización diaria', h('p', {}, 'Todos los días después de las 7:00 (hora de Argentina) los agentes actualizan tus bloques con ofertas de los últimos 15 días, sin repetir lo que ya está en tu lista. También podés tocar “Actualizar ahora” (hasta 4 veces por día).')),
     sec('Portales que no se pueden leer automáticamente', h('p', {}, 'Bumeran, Computrabajo, LinkedIn y ZonaJobs bloquean la lectura automática. En cada bloque tenés enlaces directos con tu búsqueda ya armada para abrirlos con un toque.')),
     sec('Tus datos', h('p', {}, 'Podés borrar tu cuenta y todos tus datos (incluido el CV) desde Mi perfil. Más detalles en la Política de Privacidad. Los avisos pertenecen a sus portales: confirmá modalidad y sueldo antes de postularte.')),
-    sec('Arrepentimiento', h('p', {}, 'Si contrataste un servicio pago a distancia, tenés 10 días corridos para arrepentirte con el botón “Botón de arrepentimiento” (arriba y al pie de cada pantalla).')));
+    sec('Prueba gratuita y suscripción', h('p', {}, 'Tenés 3 días de prueba gratis, sin tarjeta. Después la suscripción cuesta $ 10.000 por mes: se cobra al suscribirte y se renueva sola cada mes con Mercado Pago. Podés cancelarla cuando quieras desde Mi perfil → Mi suscripción y seguís usando el servicio hasta el final del período pago.')),
+    sec('Arrepentimiento', h('p', {}, 'Si contrataste un servicio pago a distancia, tenés 10 días corridos desde el pago para arrepentirte con el botón “Botón de arrepentimiento” (arriba y al pie de cada pantalla). Para frenar las renovaciones, cancelá también la suscripción desde Mi perfil.')));
 }
 
 /* ---------- arranque ---------- */

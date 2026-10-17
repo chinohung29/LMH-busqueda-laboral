@@ -8,7 +8,7 @@
     "dev": "wrangler dev -c wrangler.local.jsonc --persist-to .wrangler/state",
     "db:local": "wrangler d1 migrations apply lmh-empleo -c wrangler.local.jsonc --local --persist-to .wrangler/state",
     "db:remote": "wrangler d1 migrations apply lmh-empleo --remote",
-    "test": "node --test test/units.test.js test/sweep.test.js test/billing.test.js test/gate.test.js",
+    "test": "node --test test/units.test.js test/sweep.test.js test/billing.test.js test/gate.test.js test/legal.test.js",
     "deploy": "wrangler deploy"
   },
   "devDependencies": {

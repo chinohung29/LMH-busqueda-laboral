@@ -1,6 +1,6 @@
 // Utilidades compartidas del Worker.
 
-export const TERMS_VERSION = '2026-10-17';
+export const TERMS_VERSION = '2026-10-17.2';
 
 export const json = (data, status = 200, headers = {}) =>
   new Response(JSON.stringify(data), {
