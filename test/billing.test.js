@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { computeAccess, settings, syncPreapproval, checkout, webhook } from '../src/billing.js';
+import { computeAccess, settings, syncPreapproval, checkout, webhook, hasCancellableSub, cancelForWithdrawal } from '../src/billing.js';
 
 const NOW = 1_800_000_000;
 const DAY = 86400;
@@ -122,4 +122,24 @@ test('checkout: si Mercado Pago rechaza el pedido, se informa el motivo (502) y 
     assert.match(msg, /Mercado Pago 403: Invalid users involved/);
     assert.match(msg, /Los usuarios no son del mismo tipo/);
   } finally { m.restore(); }
+});
+
+test('arrepentimiento: cancela en Mercado Pago solo si hay una suscripción cancelable', async () => {
+  const none = fakeEnv({ user_id: 'u-1', trial_ends_at: 0, mp_status: null, mp_preapproval_id: null });
+  assert.equal(await hasCancellableSub(none.env, 'u-1'), false);
+  assert.equal(await cancelForWithdrawal(none.env, 'u-1'), false);
+
+  const { env } = fakeEnv({ user_id: 'u-1', trial_ends_at: 0, mp_status: 'authorized', mp_preapproval_id: 'pre1' });
+  const m = mockFetch((c) => ({ status: 200, body: c.method === 'PUT' ? { id: 'pre1', status: 'cancelled' } : { id: 'pre1', status: 'cancelled', external_reference: 'u-1' } }));
+  try {
+    assert.equal(await hasCancellableSub(env, 'u-1'), true);
+    assert.equal(await cancelForWithdrawal(env, 'u-1'), true);
+    const put = m.calls.find((c) => c.method === 'PUT');
+    assert.ok(put.url.endsWith('/preapproval/pre1'));
+    assert.deepEqual(put.body, { status: 'cancelled' });
+  } finally { m.restore(); }
+
+  const bad = fakeEnv({ user_id: 'u-1', trial_ends_at: 0, mp_status: 'authorized', mp_preapproval_id: 'pre1' });
+  const m2 = mockFetch(() => ({ status: 500, body: {} }));
+  try { assert.equal(await cancelForWithdrawal(bad.env, 'u-1'), false); } finally { m2.restore(); }
 });

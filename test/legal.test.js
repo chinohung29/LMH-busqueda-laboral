@@ -33,7 +33,7 @@ test('privacidad: informa a Mercado Pago, Cloudflare y que no se guardan datos d
 test('arrepentimiento: 10 días, pago por el mismo medio y aviso de que no frena los cobros', () => {
   assert.match(arrep, /10 días corridos/);
   assert.match(arrep, /mismo medio de pago/);
-  assert.match(arrep, /no frena por sí solo los cobros automáticos/);
+  assert.match(arrep, /cancelamos tu suscripción para que no haya nuevos cobros/);
 });
 test('el precio de la ayuda de la app coincide con la configuración', () => {
   assert.ok(read('public/app.js').includes(`$ ${ars(cfg.price)} por mes`));

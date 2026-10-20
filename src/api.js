@@ -1,8 +1,9 @@
 // Endpoints autenticados: perfil, CV, bloques, ofertas; y el botón de arrepentimiento (público).
-import { json, fail, nowSec, safeJsonParse, cleanUrl, rateLimit, clientIp, isEmail, randomToken, sendMail, mailLayout, esc } from './util.js';
+import { json, fail, nowSec, safeJsonParse, cleanUrl, rateLimit, clientIp, isEmail, randomToken, sha256, sendMail, mailLayout, esc } from './util.js';
 import { analyzeCv, blocksOf } from './ai.js';
 import { sweepUser, dedupeKey } from './sweep.js';
 import * as billing from './billing.js';
+import { getUser } from './auth.js';
 
 const WORK_MODES = ['presencial', 'hibrido', 'remoto', 'indiferente'];
 const SCHEDULES = ['part_time', 'full_time', 'freelancer'];
@@ -207,23 +208,56 @@ export async function withdrawal(env, request) {
   await env.DB.prepare('INSERT INTO withdrawals (id, code, full_name, email, service, contracted_on, comment, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
     .bind(crypto.randomUUID(), code, fullName, email, service, contracted, comment, nowSec()).run();
 
+  // Cancelación automática. Con sesión iniciada en esa misma cuenta se cancela en el acto; sin sesión
+  // hace falta confirmar desde el mail (así nadie puede cancelar la suscripción de otra persona).
+  let cancelled = false, confirmToken = null;
+  const target = await env.DB.prepare('SELECT id FROM users WHERE email = ?').bind(email).first();
+  if (target && (await billing.hasCancellableSub(env, target.id))) {
+    const me = await getUser(env, request);
+    if (me && me.id === target.id) cancelled = await billing.cancelForWithdrawal(env, target.id);
+    if (!cancelled) {
+      confirmToken = randomToken(32);
+      await env.DB.prepare('UPDATE withdrawals SET confirm_hash = ?, confirm_expires = ? WHERE code = ?')
+        .bind(await sha256(confirmToken), nowSec() + 7 * 86400, code).run();
+    }
+  }
+  if (cancelled) await env.DB.prepare("UPDATE withdrawals SET status = 'cancelada' WHERE code = ?").bind(code).run();
+  const link = confirmToken ? `${env.APP_URL}/arrepentimiento.html?confirmar=${confirmToken}` : null;
+  const cancelTxt = cancelled ? 'Cancelamos tu suscripción: no se harán nuevos cobros.'
+    : link ? `Para cancelar ahora mismo tu suscripción y frenar nuevos cobros, confirmalo con este enlace (vale 7 días): ${link}`
+    : 'No encontramos una suscripción activa asociada a este email.';
+
   const when = new Intl.DateTimeFormat('es-AR', { dateStyle: 'full', timeStyle: 'short', timeZone: 'America/Argentina/Buenos_Aires' }).format(new Date());
   // Constancia al consumidor y aviso interno. Si el mail falla igual queda registrado el pedido.
   const jobs = [
     sendMail(env, {
       to: email,
       subject: `Constancia de arrepentimiento ${code} — LMH Búsqueda Laboral`,
-      text: `Recibimos tu solicitud de arrepentimiento.\nCódigo: ${code}\nFecha y hora: ${when}\nServicio: ${service}\nNos comunicaremos a este email para dar curso a la revocación y, si corresponde, a la devolución.`,
-      html: mailLayout('Constancia de arrepentimiento', `<p>Recibimos tu solicitud de arrepentimiento.</p><p><b>Código:</b> ${esc(code)}<br><b>Fecha y hora:</b> ${esc(when)}<br><b>Servicio:</b> ${esc(service)}</p><p>Nos comunicaremos a este email para dar curso a la revocación y, si corresponde, a la devolución.</p>`),
+      text: `Recibimos tu solicitud de arrepentimiento.\nCódigo: ${code}\nFecha y hora: ${when}\nServicio: ${service}\nNos comunicaremos a este email para dar curso a la revocación y, si corresponde, a la devolución.\n${cancelTxt}`,
+      html: mailLayout('Constancia de arrepentimiento', `<p>Recibimos tu solicitud de arrepentimiento.</p><p><b>Código:</b> ${esc(code)}<br><b>Fecha y hora:</b> ${esc(when)}<br><b>Servicio:</b> ${esc(service)}</p><p>Nos comunicaremos a este email para dar curso a la revocación y, si corresponde, a la devolución.</p><p>${link ? `Para cancelar ahora mismo tu suscripción y frenar nuevos cobros, <a href="${esc(link)}">confirmalo con este enlace</a> (vale 7 días).` : esc(cancelTxt)}</p>`),
     }),
     sendMail(env, {
       to: env.ADMIN_EMAIL,
       subject: `[Arrepentimiento] ${code}`,
-      text: `Nueva solicitud ${code}\nNombre: ${fullName}\nEmail: ${email}\nServicio: ${service}\nContratado el: ${contracted ?? '-'}\nComentario: ${comment ?? '-'}\nRecibida: ${when}`,
+      text: `Nueva solicitud ${code}\nNombre: ${fullName}\nEmail: ${email}\nServicio: ${service}\nContratado el: ${contracted ?? '-'}\nComentario: ${comment ?? '-'}\nRecibida: ${when}\nSuscripción: ${cancelled ? 'cancelada automáticamente' : link ? 'pendiente de confirmación por mail' : 'sin suscripción activa'}\nRecordá devolver el pago desde Mercado Pago si corresponde.`,
       html: mailLayout(`Arrepentimiento ${code}`, `<p><b>${esc(fullName)}</b> &lt;${esc(email)}&gt;<br>Servicio: ${esc(service)}<br>Contratado el: ${esc(contracted ?? '-')}<br>Comentario: ${esc(comment ?? '-')}<br>Recibida: ${esc(when)}</p>`),
     }),
   ];
   const settled = await Promise.allSettled(jobs);
   settled.forEach((r) => r.status === 'rejected' && console.error(JSON.stringify({ evt: 'withdrawal_mail_error', msg: String(r.reason?.message || r.reason) })));
-  return json({ ok: true, code, when });
+  return json({ ok: true, code, when, cancelled, confirm_by_mail: !!link });
+}
+
+// Confirmación por mail del arrepentimiento: cancela la suscripción de quien recibió el enlace.
+export async function withdrawalConfirm(env, request) {
+  const b = await request.json().catch(() => ({}));
+  const token = String(b.token || '');
+  if (!/^[0-9a-f]{64}$/.test(token)) return fail('El enlace no es válido.');
+  if (!(await rateLimit(env, `wconfirm:ip:${clientIp(request)}`, 20, 3600))) return fail('Demasiados intentos. Probá más tarde.', 429);
+  const row = await env.DB.prepare('SELECT code, email, confirm_expires FROM withdrawals WHERE confirm_hash = ?').bind(await sha256(token)).first();
+  if (!row || row.confirm_expires < nowSec()) return fail('El enlace venció o ya fue usado.', 410);
+  const user = await env.DB.prepare('SELECT id FROM users WHERE email = ?').bind(row.email).first();
+  const cancelled = user ? await billing.cancelForWithdrawal(env, user.id) : false;
+  if (cancelled) await env.DB.prepare("UPDATE withdrawals SET status = 'cancelada', confirm_hash = NULL WHERE code = ?").bind(row.code).run();
+  return json({ ok: true, cancelled, code: row.code });
 }

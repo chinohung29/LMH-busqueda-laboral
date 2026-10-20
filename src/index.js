@@ -24,6 +24,7 @@ async function route(request, env, ctx) {
   if (method === 'POST' && pathname === '/api/auth/forgot') return auth.forgot(env, request);
   if (method === 'POST' && pathname === '/api/auth/logout') return auth.logout(env, request);
   if (method === 'POST' && pathname === '/api/arrepentimiento') return api.withdrawal(env, request);
+  if (method === 'POST' && pathname === '/api/arrepentimiento/confirmar') return api.withdrawalConfirm(env, request);
   if (method === 'POST' && pathname === '/api/billing/webhook') return billing.webhook(env, request);
   if (method === 'GET' && pathname === '/api/health') return json({ ok: true });
 

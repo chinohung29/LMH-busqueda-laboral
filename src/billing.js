@@ -142,6 +142,26 @@ export async function cancel(env, user) {
   return json({ billing: await view(env, user.id) });
 }
 
+// Arrepentimiento: ¿tiene una suscripción que se pueda cancelar?
+export async function hasCancellableSub(env, userId) {
+  const sub = await env.DB.prepare('SELECT mp_preapproval_id, mp_status FROM subscriptions WHERE user_id = ?').bind(userId).first();
+  return !!(env.MP_ACCESS_TOKEN && sub?.mp_preapproval_id && ['authorized', 'paused', 'pending'].includes(sub.mp_status));
+}
+
+// Arrepentimiento: cancela el cobro en Mercado Pago. Devuelve true si quedó cancelada.
+export async function cancelForWithdrawal(env, userId) {
+  if (!(await hasCancellableSub(env, userId))) return false;
+  const sub = await env.DB.prepare('SELECT mp_preapproval_id FROM subscriptions WHERE user_id = ?').bind(userId).first();
+  try {
+    await mp(env, 'PUT', `/preapproval/${encodeURIComponent(sub.mp_preapproval_id)}`, { status: 'cancelled' });
+    await syncPreapproval(env, sub.mp_preapproval_id);
+    return true;
+  } catch (err) {
+    console.error(JSON.stringify({ evt: 'mp_cancel_withdrawal_error', msg: String(err.message) }));
+    return false;
+  }
+}
+
 // Se usa al borrar la cuenta: evita que siga cobrándose. No frena el borrado si falla.
 export async function cancelForDeletion(env, userId) {
   try {
