@@ -212,7 +212,7 @@ export async function withdrawal(env, request) {
   const jobs = [
     sendMail(env, {
       to: email,
-      subject: `Constancia de arrepentimiento ${code} — LMH Empleo`,
+      subject: `Constancia de arrepentimiento ${code} — LMH Búsqueda Laboral`,
       text: `Recibimos tu solicitud de arrepentimiento.\nCódigo: ${code}\nFecha y hora: ${when}\nServicio: ${service}\nNos comunicaremos a este email para dar curso a la revocación y, si corresponde, a la devolución.`,
       html: mailLayout('Constancia de arrepentimiento', `<p>Recibimos tu solicitud de arrepentimiento.</p><p><b>Código:</b> ${esc(code)}<br><b>Fecha y hora:</b> ${esc(when)}<br><b>Servicio:</b> ${esc(service)}</p><p>Nos comunicaremos a este email para dar curso a la revocación y, si corresponde, a la devolución.</p>`),
     }),

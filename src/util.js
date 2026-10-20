@@ -95,14 +95,14 @@ export async function sendMail(env, { to, subject, html, text }) {
     }
     throw new Error('Servicio de email no configurado');
   }
-  await env.EMAIL.send({ to, from: { email: env.MAIL_FROM, name: 'LMH Empleo' }, subject, html, text });
+  await env.EMAIL.send({ to, from: { email: env.MAIL_FROM, name: 'LMH Búsqueda Laboral' }, subject, html, text });
 }
 
 export function mailLayout(title, bodyHtml) {
   return `<div style="font-family:system-ui,Segoe UI,Roboto,sans-serif;background:#E7E3D8;padding:24px">
 <div style="max-width:520px;margin:0 auto;background:#F1EEE4;border:1px solid #C9C2AC;border-radius:4px;padding:24px;color:#21261F">
 <h1 style="font-family:Georgia,serif;font-size:22px;margin:0 0 14px">${esc(title)}</h1>${bodyHtml}
-<p style="font-size:12px;color:#5B5F52;margin-top:24px">LMH Empleo · LMH Apps</p></div></div>`;
+<p style="font-size:12px;color:#5B5F52;margin-top:24px">LMH Búsqueda Laboral · LMH Apps</p></div></div>`;
 }
 
 export function cleanUrl(u) {

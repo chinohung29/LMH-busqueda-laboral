@@ -1,4 +1,4 @@
-// LMH Empleo — Worker principal: API (/api/*) + cron diario. La PWA estática la sirve Workers Assets.
+// LMH Búsqueda Laboral — Worker principal: API (/api/*) + cron diario. La PWA estática la sirve Workers Assets.
 import { json, fail } from './util.js';
 import * as auth from './auth.js';
 import * as api from './api.js';
@@ -39,7 +39,7 @@ async function route(request, env, ctx) {
 
   // Todo lo demás requiere prueba vigente o suscripción activa.
   if (!(await billing.hasAccess(env, user.id))) {
-    return json({ error: 'Tu prueba gratuita terminó. Suscribite para seguir usando LMH Empleo.', code: 'subscription_required' }, 402);
+    return json({ error: 'Tu prueba gratuita terminó. Suscribite para seguir usando LMH Búsqueda Laboral.', code: 'subscription_required' }, 402);
   }
 
   if (method === 'PUT' && pathname === '/api/profile') return api.updateProfile(env, request, user);

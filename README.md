@@ -1,4 +1,4 @@
-# LMH Empleo — SaaS PWA de búsqueda laboral (Cloudflare)
+# LMH Búsqueda Laboral — SaaS PWA de búsqueda laboral (Cloudflare)
 
 Continuación de la app "Seguimiento de búsqueda laboral" (respaldo 2026-10-08, Supabase + Netlify, una sola cuenta), convertida en un SaaS multiusuario sobre Cloudflare. Conserva la interfaz, el lector de CV en el navegador y la paleta del respaldo.
 

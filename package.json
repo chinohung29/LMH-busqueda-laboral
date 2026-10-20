@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "LMH Empleo: SaaS PWA para filtrar ofertas laborales en Argentina a partir del CV (Cloudflare Workers + D1 + R2 + Workers AI).",
+  "description": "LMH Búsqueda Laboral: SaaS PWA para filtrar ofertas laborales en Argentina a partir del CV (Cloudflare Workers + D1 + R2 + Workers AI).",
   "scripts": {
     "dev": "wrangler dev -c wrangler.local.jsonc --persist-to .wrangler/state",
     "db:local": "wrangler d1 migrations apply lmh-empleo -c wrangler.local.jsonc --local --persist-to .wrangler/state",

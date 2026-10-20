@@ -6,7 +6,7 @@
 // portales con API oficial, agregar un conector acá y registrarlo en CONNECTORS.
 import { cleanUrl } from './util.js';
 
-const UA = 'LMH-Empleo/1.0 (+https://lmhapps.com)';
+const UA = 'LMH-Busqueda-Laboral/1.0 (+https://lmhapps.com)';
 
 export function guessModality(...texts) {
   const t = texts.filter(Boolean).join(' ').toLowerCase();

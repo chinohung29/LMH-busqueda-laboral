@@ -98,7 +98,7 @@ export async function checkout(env, request, user) {
   // El primer cobro es al suscribirse (eso habilita la suscripción) y después uno por mes.
   // Los días de prueba que queden se pierden a propósito: no se difiere el cobro.
   const body = {
-    reason: 'LMH Empleo — suscripción mensual',
+    reason: 'LMH Búsqueda Laboral — suscripción mensual',
     external_reference: user.id,
     payer_email: user.email,
     back_url: `${env.APP_URL}/suscripcion`,

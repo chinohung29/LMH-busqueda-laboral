@@ -1,4 +1,4 @@
-// LMH Empleo — interfaz. Sin build: JS plano. Todo el contenido externo se inserta con textContent.
+// LMH Búsqueda Laboral — interfaz. Sin build: JS plano. Todo el contenido externo se inserta con textContent.
 'use strict';
 
 const root = document.getElementById('root');
@@ -71,10 +71,10 @@ function siteFooter() {
       h('a', { href: '/privacidad.html' }, 'Política de Privacidad'),
       h('a', { href: '/arrepentimiento.html' }, 'Botón de arrepentimiento'),
       h('a', { href: 'https://www.argentina.gob.ar/produccion/defensadelconsumidor', target: '_blank', rel: 'noopener noreferrer' }, 'Defensa del Consumidor')),
-    h('span', {}, 'LMH Empleo · una app de LMH Apps'));
+    h('span', {}, 'LMH Búsqueda Laboral · una app de LMH Apps'));
 }
 function brand() {
-  return h('a', { class: 'brand', href: '#/' }, h('img', { src: '/icons/logo-wide.png', alt: 'LMH' }), h('span', {}, 'LMH Empleo', h('small', {}, 'por LMH Apps')));
+  return h('a', { class: 'brand', href: '#/' }, h('img', { src: '/icons/logo-wide.png', alt: 'LMH' }), h('span', {}, 'LMH Búsqueda Laboral', h('small', {}, 'por LMH Apps')));
 }
 
 /* ---------- acceso ---------- */
@@ -269,7 +269,7 @@ async function refreshBilling(btn) {
   catch (e) { alert(e.message); } finally { btn.disabled = false; }
 }
 async function cancelSub() {
-  if (!confirm('¿Cancelar la suscripción? Vas a poder seguir usando LMH Empleo hasta el final del período que ya pagaste.')) return;
+  if (!confirm('¿Cancelar la suscripción? Vas a poder seguir usando LMH Búsqueda Laboral hasta el final del período que ya pagaste.')) return;
   try { state.billing = (await api('/api/billing/cancel', { method: 'POST' })).billing; render(); } catch (e) { alert(e.message); }
 }
 function action(label, fn, cls) { const b = h('button', cls ? { class: cls } : {}, label); b.onclick = () => fn(b); return b; }
@@ -283,7 +283,7 @@ function billingBanner() {
         h('span', { class: 'muted' }, ` Al suscribirte se cobra ${money(b.price, b.currency)} en el momento y después una vez por mes; cancelás cuando quieras.`)),
       action('Suscribirme', startCheckout, 'primary'));
   }
-  if (b.state === 'cancelling' || b.state === 'paused') return h('p', { class: 'msg' }, `Tu suscripción está ${b.state === 'paused' ? 'pausada' : 'cancelada'}. Podés usar LMH Empleo hasta el ${fmtEpoch(b.paid_until)}.`);
+  if (b.state === 'cancelling' || b.state === 'paused') return h('p', { class: 'msg' }, `Tu suscripción está ${b.state === 'paused' ? 'pausada' : 'cancelada'}. Podés usar LMH Búsqueda Laboral hasta el ${fmtEpoch(b.paid_until)}.`);
   return null;
 }
 function viewPaywall() {
@@ -443,7 +443,7 @@ function viewProfile() {
 
 /* ---------- ayuda y tutorial ---------- */
 const TUTORIAL = [
-  ['Bienvenido/a a LMH Empleo', 'Subís tu CV una vez y nosotros buscamos ofertas por vos todos los días, en portales de empleo de Argentina. Vos solo revisás y te postulás.'],
+  ['Bienvenido/a a LMH Búsqueda Laboral', 'Subís tu CV una vez y nosotros buscamos ofertas por vos todos los días, en portales de empleo de Argentina. Vos solo revisás y te postulás.'],
   ['1. Tu CV', 'Subí tu CV en PDF, DOCX o TXT. La inteligencia artificial lee tu perfil, tus habilidades, tu experiencia y tus estudios para entender qué trabajos te convienen.'],
   ['2. Tres bloques de búsqueda', 'Los bloques A y B se arman solos a partir de tu CV. El bloque ★ lo definís vos, con tus propias palabras y las que querés evitar.'],
   ['3. Pendiente, Enviado, Descartado', 'Cada oferta tiene tres botones. Pendiente: para revisar. Enviado: ya te postulaste. Descartado: no te interesa y no vuelve a aparecer.'],
@@ -474,7 +474,7 @@ function viewHelp() {
   return h('div', {},
     h('h2', {}, 'Manual de uso'),
     h('p', {}, h('button', { class: 'primary', onclick: () => showTutorial() }, 'Ver el tutorial de nuevo')),
-    sec('¿Qué hace LMH Empleo?', h('p', {}, 'Lee tu CV, entiende tu perfil y busca ofertas de empleo en Argentina que encajan con vos. Te las deja ordenadas en tres bloques y te ahorra repetir las mismas búsquedas todos los días.')),
+    sec('¿Qué hace LMH Búsqueda Laboral?', h('p', {}, 'Lee tu CV, entiende tu perfil y busca ofertas de empleo en Argentina que encajan con vos. Te las deja ordenadas en tres bloques y te ahorra repetir las mismas búsquedas todos los días.')),
     sec('Cargar o cambiar el CV', h('p', {}, 'En Mi perfil podés subir un CV nuevo cuando quieras. Los bloques A y B se rehacen y la próxima actualización busca con el perfil nuevo.')),
     sec('Preferencias de búsqueda', h('p', {}, 'Sueldo pretendido bruto, esquema de trabajo (presencial, híbrido, remoto o indiferente) y tipo de horario (part time, full time, freelancer). Las ofertas que no coinciden con el esquema se descartan solas; las que publican un sueldo por debajo de tu pretensión se marcan.')),
     sec('Los tres bloques', h('p', {}, 'A y B: armados a partir de tu CV. ★: tu búsqueda propia, con tus palabras clave. También podés agregar a mano ofertas que encontraste por tu cuenta en el bloque ★.')),

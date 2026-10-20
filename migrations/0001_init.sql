@@ -1,4 +1,4 @@
--- LMH Empleo: esquema inicial (D1 / SQLite)
+-- LMH Búsqueda Laboral: esquema inicial (D1 / SQLite)
 
 CREATE TABLE users (
   id TEXT PRIMARY KEY,

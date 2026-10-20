@@ -62,7 +62,7 @@ export async function signup(env, request) {
       const link = `${env.APP_URL}/#/restablecer/${token}`;
       await sendMail(env, {
         to: email,
-        subject: 'Ya tenés una cuenta en LMH Empleo',
+        subject: 'Ya tenés una cuenta en LMH Búsqueda Laboral',
         text: `Alguien intentó registrar este email, pero ya tenés cuenta. Si querés cambiar tu contraseña usá este enlace (vale ${RESET_HOURS} horas): ${link}`,
         html: mailLayout('Ya tenés una cuenta', `<p>Alguien intentó registrar este email, pero ya tenés cuenta.</p><p>Si querés cambiar tu contraseña, usá este enlace (vale ${RESET_HOURS} horas):</p><p><a href="${esc(link)}">Crear una contraseña nueva</a></p>`),
       });
@@ -84,9 +84,9 @@ export async function signup(env, request) {
     const link = `${env.APP_URL}/#/activar/${token}`;
     await sendMail(env, {
       to: email,
-      subject: 'Validá tu email y creá tu contraseña — LMH Empleo',
-      text: `Hola. Para validar tu email y crear tu contraseña de acceso a LMH Empleo, abrí este enlace (vale ${VERIFY_HOURS} horas): ${link}\n\nSi no fuiste vos, ignorá este mensaje.`,
-      html: mailLayout('Validá tu email', `<p>Para activar tu cuenta de LMH Empleo, validá tu email y creá tu contraseña de acceso.</p><p><a href="${esc(link)}" style="display:inline-block;background:#21261F;color:#F1EEE4;padding:10px 16px;border-radius:4px;text-decoration:none">Validar email y crear contraseña</a></p><p style="font-size:13px;color:#5B5F52">El enlace vale ${VERIFY_HOURS} horas. Si no fuiste vos, ignorá este mensaje.</p>`),
+      subject: 'Validá tu email y creá tu contraseña — LMH Búsqueda Laboral',
+      text: `Hola. Para validar tu email y crear tu contraseña de acceso a LMH Búsqueda Laboral, abrí este enlace (vale ${VERIFY_HOURS} horas): ${link}\n\nSi no fuiste vos, ignorá este mensaje.`,
+      html: mailLayout('Validá tu email', `<p>Para activar tu cuenta de LMH Búsqueda Laboral, validá tu email y creá tu contraseña de acceso.</p><p><a href="${esc(link)}" style="display:inline-block;background:#21261F;color:#F1EEE4;padding:10px 16px;border-radius:4px;text-decoration:none">Validar email y crear contraseña</a></p><p style="font-size:13px;color:#5B5F52">El enlace vale ${VERIFY_HOURS} horas. Si no fuiste vos, ignorá este mensaje.</p>`),
     });
   } catch (err) {
     console.error(JSON.stringify({ evt: 'signup_mail_error', msg: String(err?.message || err) }));
@@ -110,7 +110,7 @@ export async function forgot(env, request) {
       const link = `${env.APP_URL}/#/restablecer/${token}`;
       await sendMail(env, {
         to: email,
-        subject: 'Restablecer contraseña — LMH Empleo',
+        subject: 'Restablecer contraseña — LMH Búsqueda Laboral',
         text: `Para crear una contraseña nueva abrí este enlace (vale ${RESET_HOURS} horas): ${link}`,
         html: mailLayout('Restablecer contraseña', `<p>Para crear una contraseña nueva usá este enlace (vale ${RESET_HOURS} horas):</p><p><a href="${esc(link)}">Crear contraseña nueva</a></p>`),
       });

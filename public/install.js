@@ -30,9 +30,9 @@
 
   function hide() { if (banner) { banner.remove(); banner = null; document.body.classList.remove('has-install'); } }
   function text() {
-    if (evt) return ['Instalá LMH Empleo', 'Abrila como una app, con acceso directo y sin la barra del navegador.'];
-    if (isIOS) return ['Instalá LMH Empleo en tu iPhone', 'Tocá el botón Compartir (el cuadrado con la flecha hacia arriba) y elegí «Agregar a pantalla de inicio».'];
-    return ['Instalá LMH Empleo', 'Desde el menú del navegador (⋮ o el ícono de instalar en la barra de direcciones) elegí «Instalar app» o «Agregar a pantalla de inicio».'];
+    if (evt) return ['Instalá LMH Búsqueda Laboral', 'Abrila como una app, con acceso directo y sin la barra del navegador.'];
+    if (isIOS) return ['Instalá LMH Búsqueda Laboral en tu iPhone', 'Tocá el botón Compartir (el cuadrado con la flecha hacia arriba) y elegí «Agregar a pantalla de inicio».'];
+    return ['Instalá LMH Búsqueda Laboral', 'Desde el menú del navegador (⋮ o el ícono de instalar en la barra de direcciones) elegí «Instalar app» o «Agregar a pantalla de inicio».'];
   }
   function fill() {
     var t = text();

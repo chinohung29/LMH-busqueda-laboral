@@ -89,7 +89,7 @@ ok('actualización manual responde sin romper', r.status === 200, JSON.stringify
 
 // Arrepentimiento (público)
 const savedCookie = cookie; cookie = '';
-r = await call('/api/arrepentimiento', { method: 'POST', body: { full_name: 'Ana Gómez', email: 'ana@example.com', service: 'LMH Empleo mensual', comment: '<b>x</b>' } });
+r = await call('/api/arrepentimiento', { method: 'POST', body: { full_name: 'Ana Gómez', email: 'ana@example.com', service: 'LMH Búsqueda Laboral mensual', comment: '<b>x</b>' } });
 ok('botón de arrepentimiento registra y devuelve código', r.status === 200 && /^ARR-\d{4}-[0-9A-F]{8}$/.test(r.data.code), JSON.stringify(r.data));
 r = await call('/api/arrepentimiento', { method: 'POST', body: { full_name: '', email: 'x', service: '' } });
 ok('arrepentimiento valida datos', r.status === 400);
