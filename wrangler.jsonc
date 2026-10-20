@@ -4,6 +4,9 @@
   "main": "src/index.js",
   "compatibility_date": "2026-10-17",
   "compatibility_flags": ["nodejs_compat"],
+  // workers.dev queda activo solo para redirigir la dirección vieja al dominio propio.
+  "workers_dev": true,
+  "preview_urls": false,
 
   // PWA estática + API en el mismo Worker. Solo /api/* pasa primero por el código.
   "assets": {

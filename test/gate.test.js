@@ -98,3 +98,12 @@ test('aviso de precio: /api/me lo informa solo si fue creado con 15 días de ant
   ins('ok', future(20));
   assert.equal((await notice()).new_price, 12000);
 });
+
+test('la dirección vieja de workers.dev redirige al dominio propio', async () => {
+  const { env } = setup({ APP_URL: 'https://app.test' });
+  const res = await worker.fetch(new Request('https://lmh-empleo.cuenta.workers.dev/suscripcion?x=1'), env, { waitUntil() {} });
+  assert.equal(res.status, 301);
+  assert.equal(res.headers.get('location'), 'https://app.test/suscripcion?x=1');
+  const post = await worker.fetch(new Request('https://lmh-empleo.cuenta.workers.dev/api/billing/webhook', { method: 'POST', body: '{}' }), env, { waitUntil() {} });
+  assert.equal(post.status, 308);
+});

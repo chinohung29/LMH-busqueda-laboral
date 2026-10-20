@@ -62,6 +62,10 @@ async function route(request, env, ctx) {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    // La dirección vieja (workers.dev) redirige al dominio propio: así no fallan links, marcadores ni apps instaladas.
+    if (url.hostname.endsWith('.workers.dev') && env.APP_URL) {
+      return Response.redirect(new URL(url.pathname + url.search, env.APP_URL).toString(), request.method === 'GET' || request.method === 'HEAD' ? 301 : 308);
+    }
     if (!url.pathname.startsWith('/api/')) return env.ASSETS.fetch(request);
     try {
       return await route(request, env, ctx);
