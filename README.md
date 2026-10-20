@@ -37,7 +37,7 @@ npx wrangler email sending enable lmhapps.com   # dominio desde el que se envía
 npx wrangler secret put JOOBLE_API_KEY
 npm run deploy
 ```
-Antes de desplegar, ajustar en `wrangler.jsonc` los `vars` (`APP_URL`, `MAIL_FROM`, `ADMIN_EMAIL`) y agregar el dominio propio, por ejemplo `"routes": [{ "pattern": "empleo.lmhapps.com", "custom_domain": true }]`.
+Antes de desplegar, ajustar en `wrangler.jsonc` los `vars` (`APP_URL`, `MAIL_FROM`, `ADMIN_EMAIL`) y agregar el dominio propio; el dominio propio ya está en `routes`.
 
 Desarrollo local sin cuenta: `npm run db:local && npm run dev` (D1 y R2 simulados; el enlace de validación se imprime en la consola; sin IA real se usa el análisis de respaldo).
 

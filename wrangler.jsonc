@@ -20,23 +20,26 @@
     { "binding": "CVS", "bucket_name": "lmh-empleo-cvs" }
   ],
   "ai": { "binding": "AI" },
-  // Sin dominio propio todavía: sin binding de email, los enlaces de validación se escriben en los logs (DEV_LOG_MAIL=1).
-  // Cuando haya dominio: restaurar  "send_email": [ { "name": "EMAIL" } ],  y DEV_LOG_MAIL=0.
+  // Envío de mails con el dominio propio (hay que habilitarlo antes: npx wrangler email sending enable lmhbusquedalaboral.com).
+  "send_email": [ { "name": "EMAIL" } ],
+
+  // Dominio propio. El workers.dev sigue activo como respaldo.
+  "routes": [ { "pattern": "lmhbusquedalaboral.com", "custom_domain": true } ],
 
   // 10:05 a 13:05 UTC = 07:05 a 10:05 en Argentina (UTC-3, sin horario de verano).
   // Cada ejecución procesa a quienes todavía no se actualizaron hoy; así se reparte la carga.
   "triggers": { "crons": ["5 10-13 * * *"] },
 
   "vars": {
-    "APP_URL": "https://lmh-empleo.lmhbusquedalaboral.workers.dev",
-    "MAIL_FROM": "no-reply@lmhapps.com",
+    "APP_URL": "https://lmhbusquedalaboral.com",
+    "MAIL_FROM": "no-reply@lmhbusquedalaboral.com",
     "ADMIN_EMAIL": "lamh2903@gmail.com",
     "AI_MODEL": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
     "SWEEP_USERS_PER_RUN": "20",
     "BILLING_PRICE": "10000",
     "BILLING_CURRENCY": "ARS",
     "TRIAL_DAYS": "3",
-    "DEV_LOG_MAIL": "1"
+    "DEV_LOG_MAIL": "0"
   },
 
   "observability": {
