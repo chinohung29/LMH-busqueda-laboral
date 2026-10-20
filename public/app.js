@@ -260,10 +260,11 @@ function customBlockForm(p, onDone) {
 /* ---------- asistente inicial ---------- */
 function viewWizard() {
   const p = state.profile;
-  let step = p.cv_name ? 1 : 0;
+  let step = Math.max(state.wizStep ?? 0, p.cv_name ? 1 : 0);   // se recuerda el paso: el análisis redibuja la pantalla cada 4 s
   const body = h('div');
   const titles = ['1. Subí tu CV', '2. Contanos qué buscás', '3. Sumá tu propia búsqueda (opcional)'];
   const draw = () => {
+    state.wizStep = step;
     const forms = [
       () => p.cv_name ? h('div', {}, h('div', { class: 'msg ok' }, `CV cargado: ${p.cv_name}`), h('p', {}, h('button', { class: 'primary', onclick: () => { step = 1; draw(); } }, 'Continuar'))) : cvForm(() => { step = 1; draw(); }),
       () => prefsForm(state.profile, () => { step = 2; draw(); }),
@@ -348,7 +349,7 @@ function subscriptionCard() {
 function topBar() {
   const right = h('div', { class: 'right' }, arrepentimientoBtn());
   if (window.lmhInstall && window.lmhInstall.canPrompt()) right.append(h('button', { onclick: () => window.lmhInstall.prompt() }, 'Instalar app'));
-  right.append(h('button', { onclick: async () => { await api('/api/auth/logout', { method: 'POST' }).catch(() => {}); state.user = null; state.profile = null; render(); } }, 'Salir'));
+  right.append(h('button', { onclick: async () => { await api('/api/auth/logout', { method: 'POST' }).catch(() => {}); state.user = null; state.wizStep = undefined; state.profile = null; render(); } }, 'Salir'));
   return h('div', { class: 'top' }, brand(), right);
 }
 function navTabs(cur) {
@@ -538,9 +539,25 @@ function schedulePoll() {
   const s = state.profile?.analysis_status;
   if (s === 'pending' || s === 'running') {
     state.poll = setTimeout(async () => {
-      try { await refreshMe(); await loadAll(); render(); } catch {}
+      try { await refreshMe(); await loadAll(); renderKeepingInput(); } catch {}
     }, 4000);
   }
+}
+
+// El análisis del CV se consulta cada 4 s y vuelve a dibujar la pantalla: sin esto se borraba lo que la persona
+// estaba escribiendo (por ejemplo el sueldo) o eligiendo. Se guardan los valores y se restauran si el formulario es el mismo.
+const fieldsOf = () => [...root.querySelectorAll('input:not([type=file]), select, textarea')];
+const fieldSig = (f) => [f.tagName, f.type, f.id, f.name, f.value && (f.type === 'radio' || f.type === 'checkbox') ? f.value : '', f.getAttribute('aria-label') || ''].join(':');
+function renderKeepingInput() {
+  const before = fieldsOf();
+  const sig = before.map(fieldSig).join('|');
+  const saved = before.map((f) => (f.type === 'checkbox' || f.type === 'radio' ? f.checked : f.value));
+  const focus = before.indexOf(document.activeElement);
+  render();
+  const after = fieldsOf();
+  if (after.length !== before.length || after.map(fieldSig).join('|') !== sig) return;
+  after.forEach((f, i) => { if (f.type === 'checkbox' || f.type === 'radio') f.checked = saved[i]; else f.value = saved[i]; });
+  if (focus >= 0) after[focus].focus();
 }
 
 function render() {
@@ -583,6 +600,6 @@ async function boot() {
 }
 
 window.addEventListener('hashchange', render);
-window.addEventListener('lmh-install-change', () => { if (state.user) render(); });
+window.addEventListener('lmh-install-change', () => { if (state.user) renderKeepingInput(); });
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
 boot();
