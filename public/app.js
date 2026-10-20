@@ -139,7 +139,7 @@ function viewAuth() {
     h('div', { class: 'auth' },
       h('img', { class: 'brand-hero', src: '/icons/logo-wide.png', alt: 'LMH Apps' }),
       h('h1', {}, 'Tu búsqueda laboral, en tres bloques y sin repetidos'),
-      h('p', { class: 'sub' }, 'Subí tu CV y nuestros agentes lo leen, buscan ofertas de empleo en Argentina que encajan con tu perfil y las actualizan todos los días después de las 7:00.'),
+      h('p', { class: 'sub' }, 'Subí tu CV una sola vez. La inteligencia artificial lee tu perfil, busca ofertas de empleo en Argentina que encajan con vos y te las deja ordenadas todos los días, sin repetirte las que ya viste.'),
       h('div', { class: 'card' }, tabs, box)),
     siteFooter());
 }
@@ -185,7 +185,7 @@ function cvForm(onDone) {
       onDone && onDone();
     } catch (err) { msg(out, err.message, 'err'); btn.disabled = false; }
   } },
-    h('p', { class: 'muted' }, 'PDF, DOCX, TXT o MD de hasta 8 MB. El texto se lee en tu dispositivo y el archivo se guarda cifrado en tu cuenta.'),
+    h('p', { class: 'muted' }, 'Subí tu CV en PDF, DOCX o TXT (hasta 8 MB). El texto se lee en tu dispositivo y el archivo se guarda cifrado en tu cuenta.'),
     h('label', { for: 'cvf' }, 'Archivo del CV'), file, paste, out, h('p', {}, btn));
 }
 
@@ -205,11 +205,12 @@ function prefsForm(p, onDone) {
       await refreshMe(); msg(out, 'Preferencias guardadas.', 'ok'); onDone && onDone();
     } catch (err) { msg(out, err.message, 'err'); }
   } },
-    h('label', { for: 'sg' }, 'Sueldo pretendido bruto (mensual)'),
+    h('label', { for: 'sg' }, 'Sueldo que te gustaría cobrar (bruto, por mes)'),
     h('div', { class: 'row' }, sal, cur),
-    h('label', {}, 'Esquema de trabajo'),
+    h('p', { class: 'muted' }, 'Es opcional. Lo usamos para avisarte qué ofertas pagan menos de lo que buscás.'),
+    h('label', {}, '¿Cómo querés trabajar?'),
     ...WORK_MODES.map(([, t], i) => h('label', { class: 'radio' }, modes[i], t)),
-    h('label', {}, 'Tipo de horario (podés elegir más de uno)'),
+    h('label', {}, 'Tipo de jornada (podés elegir más de una)'),
     ...SCHEDULES.map(([, t], i) => h('label', { class: 'check' }, scheds[i], t)),
     out, h('p', {}, h('button', { class: 'primary', type: 'submit' }, 'Guardar preferencias')));
 }
@@ -224,14 +225,14 @@ function customBlockForm(p, onDone) {
     e.preventDefault(); msg(out, '');
     try {
       await api('/api/profile', { method: 'PUT', body: { custom_block_name: name.value, custom_keywords: split(kw.value), custom_exclusions: split(ex.value) } });
-      await refreshMe(); await loadAll(); msg(out, 'Bloque guardado. Se usa en la próxima actualización.', 'ok'); onDone && onDone();
+      await refreshMe(); await loadAll(); msg(out, 'Búsqueda guardada. Se usa en la próxima actualización.', 'ok'); onDone && onDone();
     } catch (err) { msg(out, err.message, 'err'); }
   } },
-    h('p', { class: 'muted' }, 'Los bloques A y B los arman los agentes leyendo tu CV. Este tercero lo definís vos.'),
-    h('label', { for: 'cbn' }, 'Nombre del bloque'), name,
-    h('label', { for: 'cbk' }, 'Qué querés buscar'), kw,
-    h('label', { for: 'cbe' }, 'Qué querés excluir'), ex,
-    out, h('p', {}, h('button', { class: 'primary', type: 'submit' }, 'Guardar mi bloque')));
+    h('p', { class: 'muted' }, 'Los bloques A y B se arman solos a partir de tu CV. Este tercero lo definís vos, para esa búsqueda puntual que tenés en mente.'),
+    h('label', { for: 'cbn' }, 'Nombre de tu búsqueda'), name,
+    h('label', { for: 'cbk' }, 'Puestos o palabras que querés buscar'), kw,
+    h('label', { for: 'cbe' }, 'Palabras que querés evitar en el título'), ex,
+    out, h('p', {}, h('button', { class: 'primary', type: 'submit' }, 'Guardar mi búsqueda')));
 }
 
 /* ---------- asistente inicial ---------- */
@@ -239,7 +240,7 @@ function viewWizard() {
   const p = state.profile;
   let step = p.cv_name ? 1 : 0;
   const body = h('div');
-  const titles = ['1. Cargá tu CV', '2. Contanos qué buscás', '3. Armá tu propio bloque'];
+  const titles = ['1. Subí tu CV', '2. Contanos qué buscás', '3. Sumá tu propia búsqueda (opcional)'];
   const draw = () => {
     const forms = [
       () => p.cv_name ? h('div', {}, h('div', { class: 'msg ok' }, `CV cargado: ${p.cv_name}`), h('p', {}, h('button', { class: 'primary', onclick: () => { step = 1; draw(); } }, 'Continuar'))) : cvForm(() => { step = 1; draw(); }),
@@ -250,7 +251,7 @@ function viewWizard() {
       step === 2 ? h('p', {}, h('button', { class: 'link', onclick: async () => { await api('/api/profile', { method: 'PUT', body: { onboarded: true } }); await refreshMe(); await loadAll(); render(); } }, 'Omitir por ahora')) : null);
   };
   draw();
-  return h('div', {}, topBar(), h('h1', {}, 'Armemos tu búsqueda'), h('p', { class: 'sub' }, 'Tres pasos y tus agentes empiezan a trabajar.'), h('div', { class: 'card' }, body), siteFooter());
+  return h('div', {}, topBar(), h('h1', {}, 'Armemos tu búsqueda'), h('p', { class: 'sub' }, 'Son tres pasos y en pocos minutos ya tenés tus primeras ofertas.'), h('div', { class: 'card' }, body), siteFooter());
 }
 
 /* ---------- barra superior y navegación ---------- */
@@ -370,7 +371,7 @@ function viewOffers() {
     try { await api('/api/sweep', { method: 'POST' }); await loadAll(); render(); }
     catch (err) { msg(out, err.message, 'err'); e.target.disabled = false; }
   } }, 'Actualizar ahora');
-  const lastTxt = p.last_sweep_at ? `Última actualización: ${new Date(p.last_sweep_at * 1000).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })}` : 'Todavía no hubo actualizaciones';
+  const lastTxt = p.last_sweep_at ? `Última actualización: ${new Date(p.last_sweep_at * 1000).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })}` : 'Todavía no buscamos ofertas para vos';
   const warn = last?.errors?.length && !Object.values(last.added || {}).some(Boolean) ? 'Algunos portales no respondieron; reintentamos automáticamente.' : null;
 
   const blk = state.blocks.find((b) => b.key === state.block) || state.blocks[0];
@@ -393,25 +394,25 @@ function viewOffers() {
   })() : null;
 
   return h('div', {},
-    h('div', { class: 'status-line' }, h('span', {}, busy ? h('span', {}, h('span', { class: 'spinner' }), 'Los agentes están leyendo tu CV y buscando ofertas…') : lastTxt), refresh),
+    h('div', { class: 'status-line' }, h('span', {}, busy ? h('span', {}, h('span', { class: 'spinner' }), 'Estamos leyendo tu CV y buscando ofertas para vos…') : lastTxt), refresh),
     out, warn ? h('p', { class: 'msg' }, warn) : null,
     st === 'error' ? h('p', { class: 'msg err' }, p.analysis_error || 'No se pudo analizar el CV.') : null,
-    !p.cv_name ? h('div', { class: 'msg' }, 'Todavía no cargaste tu CV. ', h('a', { href: '#/perfil' }, 'Cargalo en Mi perfil'), ' para que los agentes busquen por vos.') : null,
+    !p.cv_name ? h('div', { class: 'msg' }, 'Todavía no subiste tu CV. ', h('a', { href: '#/perfil' }, 'Subilo en Mi perfil'), ' y empezamos a buscar ofertas para vos.') : null,
     btabs,
-    blk ? h('div', {}, h('p', { class: 'muted' }, (blk.origin === 'agent' ? 'Armado por los agentes a partir de tu CV. ' : '') + (blk.description || '')), links) : null,
-    list.length ? list.map((o) => offerItem(o, 'ofertas')) : h('div', { class: 'empty' }, busy ? 'Enseguida aparecen las primeras ofertas.' : 'No hay ofertas pendientes en este bloque. Se actualiza todos los días después de las 7:00.'),
+    blk ? h('div', {}, h('p', { class: 'muted' }, (blk.origin === 'agent' ? 'Armado a partir de tu CV. ' : '') + (blk.description || '')), links) : null,
+    list.length ? list.map((o) => offerItem(o, 'ofertas')) : h('div', { class: 'empty' }, busy ? 'En un momento aparecen tus primeras ofertas.' : 'Por ahora no hay ofertas nuevas en este bloque. Volvemos a buscar todos los días después de las 7:00, o tocá “Actualizar ahora”.'),
     addForm);
 }
 
 function viewSent() {
   const list = state.offers.filter((o) => o.status === 'enviado').sort((a, b) => (b.sent_at || 0) - (a.sent_at || 0));
-  return h('div', {}, h('h2', {}, 'Postulaciones enviadas'), h('p', { class: 'sub' }, 'Las ofertas en las que ya completaste el proceso. Anotá cómo va cada una y cuándo hacer seguimiento.'),
-    list.length ? list.map((o) => offerItem(o, 'enviadas')) : h('div', { class: 'empty' }, 'Todavía no marcaste ninguna oferta como enviada.'));
+  return h('div', {}, h('h2', {}, 'Postulaciones enviadas'), h('p', { class: 'sub' }, 'Acá ves todas las postulaciones que enviaste. Anotá cómo va cada una y cuándo conviene volver a escribirles.'),
+    list.length ? list.map((o) => offerItem(o, 'enviadas')) : h('div', { class: 'empty' }, 'Cuando te postules a una oferta, marcala como “Enviado” y la seguís desde acá.'));
 }
 function viewDiscarded() {
   const list = state.offers.filter((o) => o.status === 'descartado').sort((a, b) => b.updated_at - a.updated_at);
   return h('div', {}, h('h2', {}, 'Ofertas descartadas'), h('p', { class: 'sub' }, 'No vuelven a aparecer en las actualizaciones diarias. Si cambiás de opinión, devolvelas a Pendiente.'),
-    list.length ? list.map((o) => offerItem(o, 'descartadas')) : h('div', { class: 'empty' }, 'No descartaste ninguna oferta.'));
+    list.length ? list.map((o) => offerItem(o, 'descartadas')) : h('div', { class: 'empty' }, 'Todavía no descartaste ninguna oferta. Descartar te ayuda a que no vuelvan a aparecer.'));
 }
 
 /* ---------- mi perfil ---------- */
@@ -434,7 +435,7 @@ function viewProfile() {
       h('h3', {}, p.cv_name ? 'Reemplazar mi CV' : 'Cargar mi CV'), cvForm(() => { location.hash = '#/ofertas'; }),
       p.cv_name ? h('p', {}, h('button', { onclick: async () => { try { await api('/api/cv/reanalyze', { method: 'POST' }); await refreshMe(); location.hash = '#/ofertas'; } catch (e) { alert(e.message); } } }, 'Volver a analizar el CV')) : null),
     h('div', { class: 'card' }, h('h2', {}, 'Qué estoy buscando'), prefsForm(p)),
-    h('div', { class: 'card' }, h('h2', {}, 'Mi bloque de búsqueda'), customBlockForm(p)),
+    h('div', { class: 'card' }, h('h2', {}, 'Mi búsqueda propia'), customBlockForm(p)),
     subscriptionCard(),
     h('div', { class: 'card' }, h('h2', {}, 'Mi cuenta'), h('p', { class: 'muted' }, state.user.email),
       h('p', {}, h('button', { class: 'danger', onclick: del }, 'Borrar mi cuenta y mis datos'))));
@@ -442,13 +443,13 @@ function viewProfile() {
 
 /* ---------- ayuda y tutorial ---------- */
 const TUTORIAL = [
-  ['Bienvenido/a a LMH Empleo', 'Cargás tu CV una vez y los agentes buscan por vos, todos los días, en portales de empleo de Argentina. Vos solo revisás y te postulás.'],
-  ['1. Tu CV', 'Subí tu CV en PDF, DOCX o TXT. Los agentes leen tu perfil, habilidades, experiencia y estudios, y entienden qué te conviene buscar.'],
-  ['2. Tres bloques de búsqueda', 'Los bloques A y B los arman los agentes a partir de tu CV. El bloque ★ lo definís vos con tus propias palabras clave y exclusiones.'],
-  ['3. Pendiente, Enviado, Descartado', 'Al lado de cada oferta tenés tres botones. Pendiente: para revisar. Enviado: ya te postulaste. Descartado: no te interesa.'],
-  ['4. Enviadas y Descartadas', 'En “Enviadas” seguís cada postulación con notas y fecha de seguimiento. “Descartadas” guarda lo que no querés volver a ver.'],
-  ['5. Actualización diaria', 'Todos los días después de las 7:00 (hora de Argentina) los agentes buscan ofertas nuevas. Nunca repiten las que ya enviaste o descartaste.'],
-  ['6. Instalala en tu celular', 'Desde el menú de tu navegador elegí “Agregar a pantalla de inicio” o el botón “Instalar app”. Podés repetir este tutorial desde Ayuda.'],
+  ['Bienvenido/a a LMH Empleo', 'Subís tu CV una vez y nosotros buscamos ofertas por vos todos los días, en portales de empleo de Argentina. Vos solo revisás y te postulás.'],
+  ['1. Tu CV', 'Subí tu CV en PDF, DOCX o TXT. La inteligencia artificial lee tu perfil, tus habilidades, tu experiencia y tus estudios para entender qué trabajos te convienen.'],
+  ['2. Tres bloques de búsqueda', 'Los bloques A y B se arman solos a partir de tu CV. El bloque ★ lo definís vos, con tus propias palabras y las que querés evitar.'],
+  ['3. Pendiente, Enviado, Descartado', 'Cada oferta tiene tres botones. Pendiente: para revisar. Enviado: ya te postulaste. Descartado: no te interesa y no vuelve a aparecer.'],
+  ['4. Seguí tus postulaciones', 'En “Enviadas” anotás cómo va cada una y elegís cuándo volver a contactar. “Descartadas” guarda lo que no querés volver a ver.'],
+  ['5. Todos los días, ofertas nuevas', 'Después de las 7:00 (hora de Argentina) buscamos ofertas nuevas. Nunca te repetimos las que ya enviaste o descartaste.'],
+  ['6. Llevala en el celular', 'Desde el menú del navegador elegí “Agregar a pantalla de inicio” o tocá “Instalar app”. Podés repetir este tutorial desde Ayuda.'],
 ];
 
 function showTutorial(onClose) {
@@ -473,13 +474,20 @@ function viewHelp() {
   return h('div', {},
     h('h2', {}, 'Manual de uso'),
     h('p', {}, h('button', { class: 'primary', onclick: () => showTutorial() }, 'Ver el tutorial de nuevo')),
-    sec('¿Qué hace LMH Empleo?', h('p', {}, 'Lee tu CV, entiende tu perfil y busca ofertas de empleo en Argentina que encajan. Ordena todo en tres bloques y te ahorra repetir las mismas búsquedas todos los días.')),
+    sec('¿Qué hace LMH Empleo?', h('p', {}, 'Lee tu CV, entiende tu perfil y busca ofertas de empleo en Argentina que encajan con vos. Te las deja ordenadas en tres bloques y te ahorra repetir las mismas búsquedas todos los días.')),
     sec('Cargar o cambiar el CV', h('p', {}, 'En Mi perfil podés subir un CV nuevo cuando quieras. Los bloques A y B se rehacen y la próxima actualización busca con el perfil nuevo.')),
     sec('Preferencias de búsqueda', h('p', {}, 'Sueldo pretendido bruto, esquema de trabajo (presencial, híbrido, remoto o indiferente) y tipo de horario (part time, full time, freelancer). Las ofertas que no coinciden con el esquema se descartan solas; las que publican un sueldo por debajo de tu pretensión se marcan.')),
-    sec('Los tres bloques', h('p', {}, 'A y B: armados por los agentes. ★: tu bloque, con tus palabras clave. También podés agregar a mano ofertas que encontraste por tu cuenta en el bloque ★.')),
+    sec('Los tres bloques', h('p', {}, 'A y B: armados a partir de tu CV. ★: tu búsqueda propia, con tus palabras clave. También podés agregar a mano ofertas que encontraste por tu cuenta en el bloque ★.')),
     sec('Pendiente, Enviado, Descartado', h('ul', {}, h('li', {}, 'Pendiente: ofertas para revisar.'), h('li', {}, 'Enviado: ya te postulaste; pasa a la pestaña Enviadas.'), h('li', {}, 'Descartado: no te interesa; pasa a Descartadas y no vuelve a aparecer.'))),
+    sec('Consejos para postularte', h('ul', {},
+      h('li', {}, 'Adaptá tu CV a cada aviso: poné primero la experiencia y las palabras que el aviso pide.'),
+      h('li', {}, 'Postulate cuanto antes: muchos avisos se cierran cuando reciben suficientes CV.'),
+      h('li', {}, 'Usá un email de aspecto profesional y revisá la carpeta de spam por si te responden ahí.'),
+      h('li', {}, 'Anotá la fecha de cada postulación y, si pasan unos días sin respuesta, escribí un mensaje corto y amable.'),
+      h('li', {}, 'Para la entrevista, preparate 2 o 3 ejemplos concretos de cosas que lograste.'),
+      h('li', {}, 'Desconfiá de los avisos que te piden plata o datos bancarios: una búsqueda real nunca los necesita.'))),
     sec('Seguimiento de postulaciones', h('p', {}, 'En Enviadas anotá novedades y elegí una fecha para volver a contactar.')),
-    sec('Actualización diaria', h('p', {}, 'Todos los días después de las 7:00 (hora de Argentina) los agentes actualizan tus bloques con ofertas de los últimos 15 días, sin repetir lo que ya está en tu lista. También podés tocar “Actualizar ahora” (hasta 4 veces por día).')),
+    sec('Actualización diaria', h('p', {}, 'Todos los días después de las 7:00 (hora de Argentina) actualizamos tus bloques con ofertas de los últimos 15 días, sin repetir lo que ya está en tu lista. También podés tocar “Actualizar ahora” (hasta 4 veces por día).')),
     sec('Portales que no se pueden leer automáticamente', h('p', {}, 'Bumeran, Computrabajo, LinkedIn y ZonaJobs bloquean la lectura automática. En cada bloque tenés enlaces directos con tu búsqueda ya armada para abrirlos con un toque.')),
     sec('Tus datos', h('p', {}, 'Podés borrar tu cuenta y todos tus datos (incluido el CV) desde Mi perfil. Más detalles en la Política de Privacidad. Los avisos pertenecen a sus portales: confirmá modalidad y sueldo antes de postularte.')),
     sec('Prueba gratuita y suscripción', h('p', {}, 'Tenés 3 días de prueba gratis, sin tarjeta. Después la suscripción cuesta $ 10.000 por mes: se cobra al suscribirte y se renueva sola cada mes con Mercado Pago. Podés cancelarla cuando quieras desde Mi perfil → Mi suscripción y seguís usando el servicio hasta el final del período pago.')),
