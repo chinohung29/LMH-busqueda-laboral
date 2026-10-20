@@ -66,3 +66,11 @@ test('utilidades', () => {
   assert.ok(cleanUrl('https://x.com/a'));
   assert.equal(ageDays('2026-10-10', '2026-10-17'), 7);
 });
+
+import { validateNotice } from '../src/pricing.js';
+test('aviso de precio: exige al menos 15 días y datos válidos', () => {
+  assert.equal(validateNotice(12000, '2026-11-05', '2026-10-21'), null);
+  assert.match(validateNotice(12000, '2026-11-04', '2026-10-21'), /15 días/);
+  assert.match(validateNotice(0, '2026-12-01', '2026-10-21'), /precio/);
+  assert.match(validateNotice(12000, '01/12/2026', '2026-10-21'), /AAAA-MM-DD/);
+});

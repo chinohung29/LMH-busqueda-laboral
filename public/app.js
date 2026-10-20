@@ -295,6 +295,12 @@ async function cancelSub() {
   try { state.billing = (await api('/api/billing/cancel', { method: 'POST' })).billing; render(); } catch (e) { alert(e.message); }
 }
 function action(label, fn, cls) { const b = h('button', cls ? { class: cls } : {}, label); b.onclick = () => fn(b); return b; }
+function priceNoticeBanner() {
+  const n = state.priceNotice;
+  if (!n || !state.billing) return null;
+  const when = new Date(`${n.effective_on}T12:00:00Z`).toLocaleDateString('es-AR', { dateStyle: 'long', timeZone: 'UTC' });
+  return h('p', { class: 'msg' }, `Aviso: desde el ${when} el precio de la suscripción pasa a ${money(n.new_price, state.billing.currency)} por mes. Si no estás de acuerdo, podés cancelar antes de esa fecha sin penalidad.`);
+}
 function billingBanner() {
   const b = state.billing;
   if (!b) return null;
@@ -519,7 +525,7 @@ function viewHelp() {
 /* ---------- arranque ---------- */
 async function refreshMe() {
   const d = await api('/api/me');
-  state.user = d.user; state.profile = d.profile; state.billing = d.billing;
+  state.user = d.user; state.profile = d.profile; state.billing = d.billing; state.priceNotice = d.price_notice || null;
   schedulePoll();
 }
 async function loadAll() {
@@ -547,7 +553,7 @@ function render() {
   const r = route()[0] || 'ofertas';
   const views = { ofertas: viewOffers, enviadas: viewSent, descartadas: viewDiscarded, perfil: viewProfile, ayuda: viewHelp };
   const cur = views[r] ? r : 'ofertas';
-  root.append(...[topBar(), navTabs(cur), billingBanner(), views[cur](), siteFooter()].filter(Boolean));
+  root.append(...[topBar(), navTabs(cur), priceNoticeBanner(), billingBanner(), views[cur](), siteFooter()].filter(Boolean));
   if (!state.profile.tutorial_done && !document.querySelector('.overlay')) showTutorial();
 }
 

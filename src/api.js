@@ -4,6 +4,7 @@ import { analyzeCv, blocksOf } from './ai.js';
 import { sweepUser, dedupeKey } from './sweep.js';
 import * as billing from './billing.js';
 import { getUser } from './auth.js';
+import { activeNotice } from './pricing.js';
 
 const WORK_MODES = ['presencial', 'hibrido', 'remoto', 'indiferente'];
 const SCHEDULES = ['part_time', 'full_time', 'freelancer'];
@@ -34,7 +35,7 @@ const getProfile = (env, userId) => env.DB.prepare('SELECT * FROM profiles WHERE
 
 export async function me(env, user) {
   const p = await getProfile(env, user.id);
-  return json({ user: { email: user.email }, profile: profileView(p), billing: await billing.view(env, user.id) });
+  return json({ user: { email: user.email }, profile: profileView(p), billing: await billing.view(env, user.id), price_notice: await activeNotice(env) });
 }
 
 export async function updateProfile(env, request, user) {

@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import worker from '../src/index.js';
 import { timingSafeEqual } from 'node:crypto';
 import { sha256 } from '../src/util.js';
@@ -12,7 +12,7 @@ if (!crypto.subtle.timingSafeEqual) crypto.subtle.timingSafeEqual = (a, b) => a.
 
 function setup(extraEnv = {}) {
   const db = new DatabaseSync(':memory:');
-  for (const f of ['0001_init.sql', '0002_billing.sql']) db.exec(readFileSync(new URL(`../migrations/${f}`, import.meta.url), 'utf8'));
+  for (const f of readdirSync(new URL('../migrations/', import.meta.url)).filter((n) => n.endsWith('.sql')).sort()) db.exec(readFileSync(new URL(`../migrations/${f}`, import.meta.url), 'utf8'));
   const wrap = (sql, args = []) => ({
     bind: (...a) => wrap(sql, a),
     first: async () => db.prepare(sql).get(...args) ?? null,
@@ -84,4 +84,17 @@ test('borrar la cuenta elimina también la suscripción', async () => {
   const r = await call(env, '/api/account', { method: 'DELETE', cookie, body: { password: 'clave-segura-1' } });
   assert.equal(r.status, 200);
   assert.equal(db.prepare('SELECT COUNT(*) n FROM subscriptions').get().n, 0);
+});
+
+test('aviso de precio: /api/me lo informa solo si fue creado con 15 días de anticipación', async () => {
+  const { db, env } = setup();
+  const { cookie } = await login(db);
+  const ins = (id, eff) => db.prepare("INSERT INTO price_notices (id, new_price, effective_on, created_at) VALUES (?, 12000, ?, strftime('%s','now'))").run(id, eff);
+  const future = (d) => new Date(Date.now() + d * 86400000).toISOString().slice(0, 10);
+  const notice = async () => (await (await call(env, '/api/me', { cookie })).json()).price_notice;
+  assert.equal(await notice(), null);
+  ins('corto', future(5));                  // solo 5 días de aviso: no vale
+  assert.equal(await notice(), null);
+  ins('ok', future(20));
+  assert.equal((await notice()).new_price, 12000);
 });

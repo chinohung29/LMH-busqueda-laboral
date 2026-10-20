@@ -4,6 +4,7 @@ import * as auth from './auth.js';
 import * as api from './api.js';
 import * as billing from './billing.js';
 import { runDailySweep } from './sweep.js';
+import { sendNoticeEmails } from './pricing.js';
 
 // Defensa CSRF adicional: las escrituras solo se aceptan del mismo origen.
 function sameOrigin(request) {
@@ -72,6 +73,6 @@ export default {
 
   // Cron: 10:05–13:05 UTC (07:05–10:05 hora de Argentina). Ver wrangler.jsonc.
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(runDailySweep(env));
+    ctx.waitUntil(Promise.allSettled([runDailySweep(env), sendNoticeEmails(env)]));
   },
 };
