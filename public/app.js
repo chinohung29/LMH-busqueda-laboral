@@ -102,6 +102,27 @@ function viewAuth() {
     } }, h('label', { for: 'le' }, 'Email'), email, h('label', { for: 'lp' }, 'Contraseña'), pass, out,
       h('p', {}, btn, ' ', h('button', { type: 'button', class: 'link', onclick: goForgot }, 'Olvidé mi contraseña')));
   }
+  // Aviso posterior al registro: dónde buscar el mail y cómo pedirlo de nuevo (el servidor limita a 3 por hora).
+  function sentNotice(message, payload) {
+    const out = h('p', { hidden: true });
+    const again = h('button', { type: 'button', class: 'link' }, 'Reenviar el mail');
+    let wait = 0, timer = null;
+    const tick = () => {
+      again.disabled = wait > 0;
+      again.textContent = wait > 0 ? `Reenviar el mail (${wait} s)` : 'Reenviar el mail';
+      if (wait > 0) timer = setTimeout(() => { wait -= 1; tick(); }, 1000);
+    };
+    again.onclick = async () => {
+      again.disabled = true; msg(out, '');
+      try { await api('/api/auth/signup', { method: 'POST', body: payload }); msg(out, 'Te lo mandamos de nuevo.', 'ok'); }
+      catch (err) { msg(out, err.message, 'err'); }
+      wait = 60; clearTimeout(timer); tick();
+    };
+    return h('div', {}, h('div', { class: 'msg ok' }, message),
+      h('p', { class: 'muted' }, 'Desde el enlace del mail vas a crear tu contraseña de acceso.'),
+      h('p', {}, h('b', {}, '¿No lo ves? '), 'Revisá la carpeta de spam, correo no deseado o promociones. El mail llega desde ', h('b', {}, 'no-reply@lmhbusquedalaboral.com'), ' y puede tardar un minuto. Si lo encontrás en spam, marcalo como «No es spam».'),
+      out, h('p', {}, again));
+  }
   function signupForm() {
     const out = h('p', { hidden: true });
     const email = h('input', { type: 'email', required: true, autocomplete: 'email', id: 'se' });
@@ -111,8 +132,9 @@ function viewAuth() {
     return h('form', { onsubmit: async (e) => {
       e.preventDefault(); btn.disabled = true; msg(out, '');
       try {
-        const r = await api('/api/auth/signup', { method: 'POST', body: { email: email.value, accept_terms: t.checked, accept_privacy: p.checked } });
-        box.replaceChildren(h('div', { class: 'msg ok' }, r.message), h('p', { class: 'muted' }, 'Desde el enlace del mail vas a crear tu contraseña de acceso.'));
+        const payload = { email: email.value, accept_terms: t.checked, accept_privacy: p.checked };
+        const r = await api('/api/auth/signup', { method: 'POST', body: payload });
+        box.replaceChildren(sentNotice(r.message, payload));
       } catch (err) { msg(out, err.message, 'err'); btn.disabled = false; }
     } },
       h('p', { class: 'muted' }, 'Te enviamos un enlace para validar tu email. Desde ahí creás tu contraseña.'),
