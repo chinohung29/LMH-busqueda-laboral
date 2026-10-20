@@ -1,5 +1,5 @@
 // Service worker: guarda el "cascarón" de la app. La API siempre va a la red.
-const VERSION = 'v14';
+const VERSION = 'v15';
 const SHELL = ['/', '/index.html', '/styles.css', '/app.js', '/cv.js', '/theme.js', '/install.js', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/logo-wide.png',
   '/terminos.html', '/privacidad.html', '/arrepentimiento.html', '/legal.css', '/arrepentimiento.js'];
 
