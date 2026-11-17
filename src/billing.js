@@ -1,6 +1,6 @@
 // Suscripción mensual con Mercado Pago (preapproval) + prueba gratuita que maneja la app.
 // Acceso = prueba vigente, o suscripción autorizada, o suscripción cancelada/pausada con el período ya pago.
-import { json, fail, nowSec, rateLimit, clientIp } from './util.js';
+import { json, fail, nowSec, rateLimit, clientIp, mpSignatureValid, secEvent } from './util.js';
 
 const MP = 'https://api.mercadopago.com';
 const DAY = 86400;
@@ -181,6 +181,16 @@ export async function webhook(env, request) {
   const body = await request.json().catch(() => ({}));
   const type = String(body.type || body.topic || url.searchParams.get('type') || url.searchParams.get('topic') || '');
   const id = String(body?.data?.id ?? url.searchParams.get('data.id') ?? url.searchParams.get('id') ?? '');
+  // Con MP_WEBHOOK_SECRET configurado (wrangler secret put MP_WEBHOOK_SECRET) solo se aceptan avisos firmados por Mercado Pago.
+  if (env.MP_WEBHOOK_SECRET) {
+    const dataId = url.searchParams.get('data.id') ?? String(body?.data?.id ?? '');
+    if (!(await mpSignatureValid(env.MP_WEBHOOK_SECRET, request.headers.get('x-signature'), request.headers.get('x-request-id'), dataId))) {
+      secEvent('webhook_bad_signature', { ip: clientIp(request) });
+      return json({ error: 'firma inválida' }, 401);
+    }
+  } else {
+    console.warn(JSON.stringify({ evt: 'security', type: 'webhook_unsigned_mode', hint: 'Configurá MP_WEBHOOK_SECRET' }));
+  }
   if (!env.MP_ACCESS_TOKEN || !/^[A-Za-z0-9_-]{4,64}$/.test(id)) return json({ ok: true });
   if (!(await rateLimit(env, `mpwh:${clientIp(request)}`, 300, 3600))) return json({ ok: true });
   try {

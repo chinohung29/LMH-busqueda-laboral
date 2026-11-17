@@ -30,7 +30,7 @@ async function login(db) {
   return { cookie: `sid=${sid}` };
 }
 const call = (env, path, { method = 'GET', cookie, body } = {}) =>
-  worker.fetch(new Request(`https://app.test${path}`, { method, headers: { ...(cookie ? { cookie } : {}), ...(body ? { 'content-type': 'application/json' } : {}) }, body: body ? JSON.stringify(body) : undefined }), env, { waitUntil() {} });
+  worker.fetch(new Request(`https://app.test${path}`, { method, headers: { 'sec-fetch-site': 'same-origin', ...(cookie ? { cookie } : {}), ...(body ? { 'content-type': 'application/json' } : {}) }, body: body ? JSON.stringify(body) : undefined }), env, { waitUntil() {} });
 
 test('con la prueba vigente se usa la app y /api/me informa los días que quedan', async () => {
   const { db, env } = setup();

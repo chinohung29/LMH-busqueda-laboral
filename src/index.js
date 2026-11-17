@@ -1,5 +1,5 @@
 // LMH Búsqueda Laboral — Worker principal: API (/api/*) + cron diario. La PWA estática la sirve Workers Assets.
-import { json, fail } from './util.js';
+import { json, fail, csrfOk, secEvent, withSecurityHeaders } from './util.js';
 import * as auth from './auth.js';
 import * as api from './api.js';
 import * as billing from './billing.js';
@@ -7,17 +7,12 @@ import * as push from './push.js';
 import { runDailySweep } from './sweep.js';
 import { sendNoticeEmails } from './pricing.js';
 
-// Defensa CSRF adicional: las escrituras solo se aceptan del mismo origen.
-function sameOrigin(request) {
-  const origin = request.headers.get('origin');
-  return !origin || origin === new URL(request.url).origin;
-}
-
 async function route(request, env, ctx) {
   const url = new URL(request.url);
   const { pathname } = url;
   const method = request.method;
-  if (method !== 'GET' && method !== 'HEAD' && !sameOrigin(request)) return fail('Origen no permitido.', 403);
+  if (method === 'OPTIONS') return new Response(null, { status: 204 });   // sin CORS: ningún otro sitio puede llamar a la API
+  if (!csrfOk(request, pathname)) { secEvent('csrf_blocked', { path: pathname, origin: request.headers.get('origin') }); return fail('Origen no permitido.', 403); }
 
   // Públicos
   if (method === 'POST' && pathname === '/api/auth/signup') return auth.signup(env, request);
@@ -66,8 +61,7 @@ async function route(request, env, ctx) {
   return fail('No encontrado.', 404);
 }
 
-export default {
-  async fetch(request, env, ctx) {
+async function handle(request, env, ctx) {
     const url = new URL(request.url);
     // La dirección vieja (workers.dev) redirige al dominio propio: así no fallan links, marcadores ni apps instaladas.
     if (url.hostname.endsWith('.workers.dev') && env.APP_URL) {
@@ -80,6 +74,17 @@ export default {
       console.error(JSON.stringify({ evt: 'unhandled', path: url.pathname, msg: String(err?.message || err) }));
       return fail('Error interno. Probá de nuevo.', 500);
     }
+}
+
+export default {
+  async fetch(request, env, ctx) {
+    const url = new URL(request.url);
+    // Siempre HTTPS (el dominio propio ya lo fuerza; esto cubre cualquier otra ruta).
+    if (url.protocol === 'http:' && url.hostname !== 'localhost' && url.hostname !== '127.0.0.1') {
+      url.protocol = 'https:';
+      return Response.redirect(url.toString(), 308);
+    }
+    return withSecurityHeaders(await handle(request, env, ctx));
   },
 
   // Cron: 10:05–13:05 UTC (07:05–10:05 hora de Argentina). Ver wrangler.jsonc.

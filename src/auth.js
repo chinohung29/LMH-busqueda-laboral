@@ -1,7 +1,7 @@
 // Registro por email con enlace de validación, creación de contraseña, sesiones.
 import {
   TERMS_VERSION, json, fail, sha256, randomToken, hashPassword, safeEqualHex, nowSec, isEmail,
-  parseCookies, clientIp, rateLimit, sendMail, mailLayout, esc,
+  parseCookies, clientIp, rateLimit, sendMail, mailLayout, esc, secEvent,
 } from './util.js';
 import { cancelForDeletion } from './billing.js';
 
@@ -17,10 +17,12 @@ async function issueToken(env, userId, kind, hours) {
   return token;
 }
 
+// Con HTTPS la cookie usa el prefijo __Host- (solo vale para este dominio exacto y siempre con Secure).
 function sessionCookie(request, value, maxAgeSec) {
-  const secure = new URL(request.url).protocol === 'https:' ? '; Secure' : '';
-  return `sid=${value}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAgeSec}${secure}`;
+  const https = new URL(request.url).protocol === 'https:';
+  return `${https ? '__Host-sid' : 'sid'}=${value}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAgeSec}${https ? '; Secure' : ''}`;
 }
+const readSid = (request) => { const c = parseCookies(request.headers.get('cookie')); return c['__Host-sid'] || c.sid; };
 
 async function startSession(env, request, userId) {
   const sid = randomToken(32);
@@ -32,7 +34,7 @@ async function startSession(env, request, userId) {
 }
 
 export async function getUser(env, request) {
-  const sid = parseCookies(request.headers.get('cookie')).sid;
+  const sid = readSid(request);
   if (!sid) return null;
   return env.DB.prepare(
     `SELECT u.id, u.email, u.status FROM sessions s JOIN users u ON u.id = s.user_id
@@ -131,7 +133,7 @@ export async function activate(env, request) {
   if (!(await rateLimit(env, `activate:ip:${clientIp(request)}`, 20, 3600))) return fail('Demasiados intentos.', 429);
 
   const row = await env.DB.prepare('SELECT user_id, kind, expires_at FROM tokens WHERE token_hash = ?').bind(await sha256(token)).first();
-  if (!row || row.expires_at < nowSec()) return fail('El enlace venció o ya fue usado. Pedí uno nuevo.', 410);
+  if (!row || row.expires_at < nowSec()) { secEvent('invalid_or_expired_link', { ip: clientIp(request) }); return fail('El enlace venció o ya fue usado. Pedí uno nuevo.', 410); }
 
   const { hash, salt } = await hashPassword(password);
   const now = nowSec();
@@ -151,20 +153,24 @@ export async function login(env, request) {
   const password = String(body.password || '');
   if (!isEmail(email) || !password) return fail('Email o contraseña incorrectos.', 401);
   if (!(await rateLimit(env, `login:mail:${email}`, 8, 900)) || !(await rateLimit(env, `login:ip:${clientIp(request)}`, 30, 900))) {
+    secEvent('login_rate_limited', { ip: clientIp(request) });
     return fail('Demasiados intentos. Esperá unos minutos.', 429);
   }
   const user = await env.DB.prepare("SELECT id, pass_hash, pass_salt FROM users WHERE email = ? AND status = 'active'").bind(email).first();
   // Se calcula el hash aunque el usuario no exista, para no revelar qué emails están registrados.
   const calc = await hashPassword(password, user?.pass_salt);
-  if (!user || !safeEqualHex(calc.hash, user.pass_hash)) return fail('Email o contraseña incorrectos.', 401);
+  if (!user || !safeEqualHex(calc.hash, user.pass_hash)) { secEvent('login_failed', { ip: clientIp(request) }); return fail('Email o contraseña incorrectos.', 401); }
   const cookie = await startSession(env, request, user.id);
   return json({ ok: true }, 200, { 'set-cookie': cookie });
 }
 
 export async function logout(env, request) {
-  const sid = parseCookies(request.headers.get('cookie')).sid;
+  const sid = readSid(request);
   if (sid) await env.DB.prepare('DELETE FROM sessions WHERE token_hash = ?').bind(await sha256(sid)).run();
-  return json({ ok: true }, 200, { 'set-cookie': sessionCookie(request, '', 0) });
+  const h = new Headers({ 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
+  h.append('set-cookie', sessionCookie(request, '', 0));
+  h.append('set-cookie', 'sid=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0; Secure');   // cookie vieja, por las dudas
+  return new Response(JSON.stringify({ ok: true }), { status: 200, headers: h });
 }
 
 // Borra la cuenta y todos sus datos (incluido el CV en R2). Pide la contraseña.
@@ -172,7 +178,8 @@ export async function deleteAccount(env, request, user) {
   const body = await request.json().catch(() => ({}));
   const row = await env.DB.prepare('SELECT pass_hash, pass_salt FROM users WHERE id = ?').bind(user.id).first();
   const calc = await hashPassword(String(body.password || ''), row?.pass_salt);
-  if (!row || !safeEqualHex(calc.hash, row.pass_hash)) return fail('La contraseña no coincide.', 403);
+  if (!row || !safeEqualHex(calc.hash, row.pass_hash)) { secEvent('delete_account_bad_password', { user: user.id }); return fail('La contraseña no coincide.', 403); }
+  secEvent('account_deleted', { user: user.id });
   await cancelForDeletion(env, user.id);
   const prof = await env.DB.prepare('SELECT cv_key FROM profiles WHERE user_id = ?').bind(user.id).first();
   if (prof?.cv_key) await env.CVS.delete(prof.cv_key);

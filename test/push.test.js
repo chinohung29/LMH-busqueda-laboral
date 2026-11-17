@@ -101,20 +101,20 @@ test('API: valida el endpoint, limita dispositivos y permite cambiar de cuenta e
   const { env, DB } = await setup();
   assert.equal((await subscribe(env, req({ endpoint: 'http://inseguro.example/x' }), { id: 'u1' })).status, 400);
   assert.equal((await subscribe(env, req({ endpoint: 'no es una url' }), { id: 'u1' })).status, 400);
-  assert.equal((await subscribe(env, req({ endpoint: 'https://push.example/' + 'a'.repeat(700) }), { id: 'u1' })).status, 400);
-  for (let i = 0; i < 5; i++) assert.equal((await subscribe(env, req({ endpoint: `https://push.example/d${i}` }), { id: 'u1' })).status, 200);
-  assert.equal((await subscribe(env, req({ endpoint: 'https://push.example/d5' }), { id: 'u1' })).status, 400, 'tope de 5 dispositivos');
-  assert.equal((await subscribe(env, req({ endpoint: 'https://push.example/d0' }), { id: 'u1' })).status, 200, 'volver a suscribir el mismo no cuenta de más');
+  assert.equal((await subscribe(env, req({ endpoint: 'https://fcm.googleapis.com/' + 'a'.repeat(700) }), { id: 'u1' })).status, 400);
+  for (let i = 0; i < 5; i++) assert.equal((await subscribe(env, req({ endpoint: `https://fcm.googleapis.com/d${i}` }), { id: 'u1' })).status, 200);
+  assert.equal((await subscribe(env, req({ endpoint: 'https://fcm.googleapis.com/d5' }), { id: 'u1' })).status, 400, 'tope de 5 dispositivos');
+  assert.equal((await subscribe(env, req({ endpoint: 'https://fcm.googleapis.com/d0' }), { id: 'u1' })).status, 200, 'volver a suscribir el mismo no cuenta de más');
   assert.equal((await (await status(env, { id: 'u1' })).json()).devices, 5);
   // el mismo celular entra con otra cuenta: el aviso pasa a esa cuenta
-  assert.equal((await subscribe(env, req({ endpoint: 'https://push.example/d1' }), { id: 'u2' })).status, 200);
-  assert.equal(DB.raw.prepare("SELECT user_id u FROM push_subscriptions WHERE endpoint='https://push.example/d1'").get().u, 'u2');
+  assert.equal((await subscribe(env, req({ endpoint: 'https://fcm.googleapis.com/d1' }), { id: 'u2' })).status, 200);
+  assert.equal(DB.raw.prepare("SELECT user_id u FROM push_subscriptions WHERE endpoint='https://fcm.googleapis.com/d1'").get().u, 'u2');
   // baja
-  assert.equal((await unsubscribe(env, req({ endpoint: 'https://push.example/d2' }), { id: 'u1' })).status, 200);
-  assert.equal(DB.raw.prepare("SELECT COUNT(*) n FROM push_subscriptions WHERE endpoint='https://push.example/d2'").get().n, 0);
+  assert.equal((await unsubscribe(env, req({ endpoint: 'https://fcm.googleapis.com/d2' }), { id: 'u1' })).status, 200);
+  assert.equal(DB.raw.prepare("SELECT COUNT(*) n FROM push_subscriptions WHERE endpoint='https://fcm.googleapis.com/d2'").get().n, 0);
   // otra persona no puede dar de baja el dispositivo ajeno
-  await unsubscribe(env, req({ endpoint: 'https://push.example/d3' }), { id: 'u2' });
-  assert.equal(DB.raw.prepare("SELECT COUNT(*) n FROM push_subscriptions WHERE endpoint='https://push.example/d3'").get().n, 1);
+  await unsubscribe(env, req({ endpoint: 'https://fcm.googleapis.com/d3' }), { id: 'u2' });
+  assert.equal(DB.raw.prepare("SELECT COUNT(*) n FROM push_subscriptions WHERE endpoint='https://fcm.googleapis.com/d3'").get().n, 1);
 });
 
 test('summary: cuenta solo las ofertas nuevas pendientes de esa persona', async () => {

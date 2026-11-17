@@ -64,3 +64,17 @@ Desarrollo local sin cuenta: `npm run db:local && npm run dev` (D1 y R2 simulado
 6. **Escala.** El barrido corre dentro del Worker: unas 80 personas por día con la configuración actual. Para más, pasar el barrido a Cloudflare Queues (una tarea por persona).
 7. **Marca.** No encontré una paleta oficial de LMH Apps guardada; se usó la del respaldo. Para cambiarla, editar las variables de `:root` en `public/styles.css` y `theme_color` en `public/manifest.webmanifest`.
 8. Los datos del respaldo de Supabase (ofertas y CV de uso personal) no se migraron.
+
+## Seguridad
+
+- **Cabeceras** (CSP estricta sin scripts en línea, HSTS, nosniff, X-Frame-Options, Referrer-Policy, Permissions-Policy, COOP) en todas las respuestas: `withSecurityHeaders()` en `src/util.js`.
+- **HTTPS siempre**: el Worker redirige cualquier `http://` con 308.
+- **Sesión**: cookie `__Host-sid` (HttpOnly, Secure, SameSite=Lax, Path=/), 30 días; solo se guarda el hash del token. La cookie vieja `sid` se sigue leyendo hasta que venza.
+- **CSRF**: las escrituras exigen `Origin` igual al propio o `Sec-Fetch-Site: same-origin`. Solo el webhook de Mercado Pago se exceptúa (se autentica con su firma). No hay CORS: ningún otro sitio puede llamar a la API.
+- **Webhook de Mercado Pago**: configurar `npx wrangler secret put MP_WEBHOOK_SECRET` (la clave secreta de la sección Webhooks de Mercado Pago). Con el secreto cargado, los avisos sin firma válida se rechazan con 401. Aun sin firma, el Worker no confía en el contenido: vuelve a consultar el estado a Mercado Pago.
+- **Precio**: lo define el servidor (`BILLING_PRICE`); el navegador nunca manda montos.
+- **Archivos**: CV de hasta 8 MB, extensión permitida y contenido coherente (PDF/DOCX), se corta antes de leer el cuerpo si declara más.
+- **Notificaciones push**: solo se aceptan direcciones de los servicios de push de los navegadores.
+- **Registro de actividad rara**: eventos `{"evt":"security", "type": …}` en los logs del Worker (`wrangler tail` o el panel de Cloudflare → Logs): `login_failed`, `login_rate_limited`, `csrf_blocked`, `webhook_bad_signature`, `invalid_or_expired_link`, `delete_account_bad_password`, `account_deleted`.
+- **Límites de peticiones** (en D1): registro, inicio de sesión, restablecer, activar, CV, reanálisis, barrido manual, checkout, arrepentimiento (por IP y por destinatario), ofertas agregadas, avisos de prueba.
+- Las pruebas de seguridad están en `test/security.test.js`.

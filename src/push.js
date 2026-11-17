@@ -4,7 +4,7 @@
 //
 // Claves: VAPID_PUBLIC_KEY (punto P-256 sin comprimir, 65 bytes, base64url) y VAPID_PRIVATE_KEY (32 bytes, base64url)
 // viven como secretos del Worker (nunca en el repositorio).
-import { json, fail, nowSec, rateLimit, isEmail } from './util.js';
+import { json, fail, nowSec, rateLimit, isEmail, pushEndpointOk } from './util.js';
 
 const MAX_DEVICES = 5;
 const MAX_FAILS = 5;
@@ -32,7 +32,7 @@ export async function vapidJwt(env, audience, now = nowSec()) {
   return `${head}.${body}.${b64u.enc(sig)}`;
 }
 
-const validEndpoint = (e) => { try { const u = new URL(e); return u.protocol === 'https:' && e.length <= 600; } catch { return false; } };
+const validEndpoint = pushEndpointOk;
 
 // Envía un aviso vacío a un dispositivo. Devuelve 'ok' | 'gone' (dispositivo dado de baja) | 'error'.
 export async function sendPush(env, sub, { ttl = 6 * 3600 } = {}) {

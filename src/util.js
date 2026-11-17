@@ -114,3 +114,62 @@ export function cleanUrl(u) {
     return null;
   }
 }
+
+// ---------- Seguridad ----------
+
+// Registro de eventos sospechosos (queda en los logs del Worker; ver README → Seguridad).
+export function secEvent(type, details = {}) {
+  console.warn(JSON.stringify({ evt: 'security', type, ...details }));
+}
+
+// La PWA no usa scripts en línea, ni recursos de terceros: todo es del propio origen.
+export const CSP = [
+  "default-src 'self'", "script-src 'self'", "style-src 'self' 'unsafe-inline'", "img-src 'self' data:",
+  "font-src 'self'", "connect-src 'self'", "worker-src 'self' blob:", "manifest-src 'self'",
+  "object-src 'none'", "base-uri 'self'", "form-action 'self'", "frame-ancestors 'none'",
+].join('; ');
+
+export function withSecurityHeaders(res) {
+  const h = new Headers(res.headers);
+  h.set('strict-transport-security', 'max-age=31536000; includeSubDomains');
+  h.set('content-security-policy', CSP);
+  h.set('x-content-type-options', 'nosniff');
+  h.set('x-frame-options', 'DENY');
+  h.set('referrer-policy', 'strict-origin-when-cross-origin');
+  h.set('permissions-policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=()');
+  h.set('cross-origin-opener-policy', 'same-origin');
+  return new Response(res.body, { status: res.status, statusText: res.statusText, headers: h });
+}
+
+// Protección CSRF: las escrituras solo valen si el navegador indica que vienen de esta misma página.
+// El webhook de Mercado Pago (servidor a servidor, sin Origin) se exceptúa y se protege con su firma.
+export function csrfOk(request, pathname) {
+  const m = request.method;
+  if (m === 'GET' || m === 'HEAD' || m === 'OPTIONS') return true;
+  if (pathname === '/api/billing/webhook') return true;
+  const origin = request.headers.get('origin');
+  if (origin) return origin === new URL(request.url).origin;
+  const site = request.headers.get('sec-fetch-site');
+  return site === 'same-origin' || site === 'none';
+}
+
+// Firma de los avisos de Mercado Pago: HMAC-SHA256 de "id:<data.id>;request-id:<x-request-id>;ts:<ts>;".
+export async function mpSignatureValid(secret, xSignature, xRequestId, dataId) {
+  if (!secret || !xSignature || !dataId) return false;
+  const parts = Object.fromEntries(String(xSignature).split(',').map((p) => p.trim().split('=')).filter((p) => p.length === 2));
+  if (!parts.ts || !/^[0-9a-f]{64}$/.test(parts.v1 || '')) return false;
+  const id = /^[A-Za-z0-9]+$/.test(dataId) ? dataId.toLowerCase() : dataId;
+  const manifest = `id:${id};request-id:${xRequestId || ''};ts:${parts.ts};`;
+  const key = await crypto.subtle.importKey('raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const mac = toHex(await crypto.subtle.sign('HMAC', key, enc.encode(manifest)));
+  return safeEqualHex(mac, parts.v1);
+}
+
+// Solo se aceptan los servicios de notificaciones de los navegadores (evita que el servidor llame a direcciones arbitrarias).
+const PUSH_HOSTS = [/^fcm\.googleapis\.com$/, /^updates\.push\.services\.mozilla\.com$/, /^web\.push\.apple\.com$/, /\.push\.apple\.com$/, /\.notify\.windows\.com$/, /^push\.services\.mozilla\.com$/];
+export function pushEndpointOk(e) {
+  try {
+    const u = new URL(e);
+    return u.protocol === 'https:' && e.length <= 600 && !u.port && !u.username && PUSH_HOSTS.some((r) => r.test(u.hostname));
+  } catch { return false; }
+}

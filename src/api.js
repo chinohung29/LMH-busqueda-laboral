@@ -87,6 +87,8 @@ async function processCv(env, userId) {
 
 export async function uploadCv(env, request, user, ctx) {
   if (!(await rateLimit(env, `cv:${user.id}`, 10, 86400))) return fail('Llegaste al límite de cargas de CV por hoy.', 429);
+  // Se corta antes de leer el cuerpo si ya declara más de lo permitido.
+  if (Number(request.headers.get('content-length') || 0) > CV_MAX_BYTES + 512 * 1024) return fail('El archivo supera los 8 MB.', 413);
   const form = await request.formData().catch(() => null);
   if (!form) return fail('No pudimos leer el formulario.');
   const cvText = String(form.get('text') || '').replace(/\r/g, '').trim().slice(0, 60000);
@@ -99,6 +101,11 @@ export async function uploadCv(env, request, user, ctx) {
   if (file && typeof file === 'object' && file.size > 0) {
     if (file.size > CV_MAX_BYTES) return fail('El archivo supera los 8 MB.');
     if (!CV_EXT.test(file.name)) return fail('Formato no soportado. Usá PDF, DOCX, TXT o MD.');
+    // El contenido tiene que coincidir con la extensión (no alcanza con el nombre).
+    const head = new Uint8Array(await file.slice(0, 4).arrayBuffer());
+    const is = (...b) => b.every((x, i) => head[i] === x);
+    if (/\.pdf$/i.test(file.name) && !is(0x25, 0x50, 0x44, 0x46)) return fail('El archivo no parece ser un PDF válido.');
+    if (/\.docx$/i.test(file.name) && !is(0x50, 0x4b, 0x03, 0x04)) return fail('El archivo no parece ser un DOCX válido.');
     name = text(file.name, 120);
     key = `cv/${user.id}/${Date.now()}-${randomToken(4)}`;
     await env.CVS.put(key, file.stream(), { httpMetadata: { contentType: file.type || 'application/octet-stream' }, customMetadata: { name } });
@@ -174,6 +181,7 @@ export async function patchOffer(env, request, user, id) {
 
 export async function addOffer(env, request, user) {
   const b = await request.json().catch(() => ({}));
+  if (!(await rateLimit(env, `addoffer:${user.id}`, 100, 86400))) return fail('Llegaste al límite de ofertas agregadas por hoy.', 429);
   const title = text(b.title, 200);
   const url = cleanUrl(b.url);
   if (!title || !url) return fail('Ingresá el puesto y un enlace válido (http o https).');
@@ -203,6 +211,8 @@ export async function withdrawal(env, request) {
   if (!fullName || !isEmail(email) || !service) return fail('Completá nombre, email y el servicio contratado.');
   if (!(await rateLimit(env, `withdrawal:ip:${clientIp(request)}`, 10, 3600))) return fail('Demasiados intentos. Probá más tarde.', 429);
 
+  // Este formulario manda un mail a la dirección indicada: se limita también por destinatario.
+  if (!(await rateLimit(env, `withdrawal:mail:${email}`, 3, 86400))) return fail('Ya recibimos varias solicitudes para este email. Probá mañana.', 429);
   const code = `ARR-${new Date().getFullYear()}-${randomToken(4).toUpperCase()}`;
   const contracted = /^\d{4}-\d{2}-\d{2}$/.test(String(b.contracted_on || '')) ? b.contracted_on : null;
   const comment = text(b.comment, 1000) || null;
