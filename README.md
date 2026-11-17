@@ -78,3 +78,5 @@ Desarrollo local sin cuenta: `npm run db:local && npm run dev` (D1 y R2 simulado
 - **Registro de actividad rara**: eventos `{"evt":"security", "type": …}` en los logs del Worker (`wrangler tail` o el panel de Cloudflare → Logs): `login_failed`, `login_rate_limited`, `csrf_blocked`, `webhook_bad_signature`, `invalid_or_expired_link`, `delete_account_bad_password`, `account_deleted`.
 - **Límites de peticiones** (en D1): registro, inicio de sesión, restablecer, activar, CV, reanálisis, barrido manual, checkout, arrepentimiento (por IP y por destinatario), ofertas agregadas, avisos de prueba.
 - Las pruebas de seguridad están en `test/security.test.js`.
+
+<!-- deploy: 2026-11-17, desplegado desde Cloudflare Builds -->
