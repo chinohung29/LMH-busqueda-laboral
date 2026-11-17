@@ -20,6 +20,15 @@ Continuación de la app "Seguimiento de búsqueda laboral" (respaldo 2026-10-08,
 
 **Sin duplicados:** `UNIQUE(user_id, dedupe_key)` en la tabla `offers` (clave = título + empresa normalizados). Una oferta que existe en cualquier estado no se vuelve a insertar, aunque aparezca en otro portal.
 
+## Notificaciones al celular (Web Push)
+Cuando la búsqueda de la mañana trae ofertas nuevas, la app avisa al celular de quien activó las notificaciones (Mi perfil → «Activar notificaciones»). Si no hay ofertas nuevas, no avisa.
+
+- **Cómo funciona:** Web Push con claves VAPID (`src/push.js`), sin servicios de terceros y sin costo. El aviso viaja **vacío**; el service worker (`public/sw.js`) pide el texto a `/api/push/summary` con la sesión de la persona. Por eso el servicio de push nunca ve las ofertas.
+- **Tabla:** `push_subscriptions` (migración `0005_push.sql`), hasta 5 dispositivos por persona. Los dispositivos dados de baja o con 5 fallos seguidos se borran solos.
+- **Secretos del Worker (no van en el repositorio):** `VAPID_PUBLIC_KEY` (punto P-256 sin comprimir, 65 bytes, base64url) y `VAPID_PRIVATE_KEY` (32 bytes, base64url). Sin ellos la función queda apagada y la app lo avisa.
+- **Android:** funciona desde Chrome y desde la app instalada. **iPhone:** solo con la app instalada en la pantalla de inicio (iOS 16.4 o más nuevo).
+- Endpoints: `GET /api/push/key`, `GET /api/push/status`, `GET /api/push/summary`, `POST /api/push/subscribe`, `POST /api/push/unsubscribe`, `POST /api/push/test`.
+
 ## Arquitectura
 Un solo Worker (`src/index.js`) sirve la API en `/api/*` y la PWA estática (`public/`) con Workers Assets. D1 guarda cuentas, perfiles y ofertas; R2 guarda los CV; Workers AI analiza el CV; Cron Triggers corre el barrido; Email Service envía los mails.
 
@@ -42,7 +51,7 @@ Antes de desplegar, ajustar en `wrangler.jsonc` los `vars` (`APP_URL`, `MAIL_FRO
 Desarrollo local sin cuenta: `npm run db:local && npm run dev` (D1 y R2 simulados; el enlace de validación se imprime en la consola; sin IA real se usa el análisis de respaldo).
 
 ## Pruebas
-- `npm test`: 11 pruebas (filtros, puntaje, duplicados, y el barrido completo sobre el esquema real con portales simulados: no repite enviadas ni descartadas, reintenta si todo falla, el cron no repite en el día).
+- `npm test`: incluye `test/push.test.js` (firma VAPID, envío, limpieza de dispositivos, API y aviso tras el barrido). Antes: 11 pruebas (filtros, puntaje, duplicados, y el barrido completo sobre el esquema real con portales simulados: no repite enviadas ni descartadas, reintenta si todo falla, el cron no repite en el día).
 - `node test/e2e.mjs <log-del-dev>` con `npm run dev` corriendo: 33 verificaciones de la API (registro, sesión, CV, estados, arrepentimiento, borrado de cuenta, CSRF).
 - Se recorrió también la interfaz completa en Chromium (registro, asistente, tutorial, ofertas, enviadas, perfil, arrepentimiento, móvil).
 

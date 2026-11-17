@@ -3,6 +3,7 @@ import { json, fail } from './util.js';
 import * as auth from './auth.js';
 import * as api from './api.js';
 import * as billing from './billing.js';
+import * as push from './push.js';
 import { runDailySweep } from './sweep.js';
 import { sendNoticeEmails } from './pricing.js';
 
@@ -49,6 +50,12 @@ async function route(request, env, ctx) {
   if (method === 'POST' && pathname === '/api/cv/reanalyze') return api.reanalyze(env, user, ctx);
   if (method === 'GET' && pathname === '/api/blocks') return api.blocks(env, user);
   if (method === 'POST' && pathname === '/api/sweep') return api.manualSweep(env, user, ctx);
+  if (method === 'GET' && pathname === '/api/push/key') return push.key(env);
+  if (method === 'GET' && pathname === '/api/push/status') return push.status(env, user);
+  if (method === 'GET' && pathname === '/api/push/summary') return push.summary(env, user);
+  if (method === 'POST' && pathname === '/api/push/subscribe') return push.subscribe(env, request, user);
+  if (method === 'POST' && pathname === '/api/push/unsubscribe') return push.unsubscribe(env, request, user);
+  if (method === 'POST' && pathname === '/api/push/test') return push.test(env, user);
   if (method === 'GET' && pathname === '/api/offers') return api.listOffers(env, user, url);
   if (method === 'POST' && pathname === '/api/offers') return api.addOffer(env, request, user);
 

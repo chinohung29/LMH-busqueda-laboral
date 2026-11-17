@@ -346,6 +346,59 @@ function subscriptionCard() {
       action('Actualizar estado', refreshBilling), ' ', b.can_cancel ? action('Cancelar suscripción', cancelSub, 'danger') : null));
 }
 
+/* ---------- notificaciones al celular (Web Push) ---------- */
+const pushSupported = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+const keyToBytes = (k) => Uint8Array.from(atob(k.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(k.length / 4) * 4, '=')), (c) => c.charCodeAt(0));
+const currentPushSub = async () => (await navigator.serviceWorker.ready).pushManager.getSubscription();
+
+function pushCard() {
+  const info = h('p', { class: 'muted' });
+  const btns = h('p');
+  const out = h('p', { class: 'msg', hidden: true });
+  const card = h('div', { class: 'card' }, h('h2', {}, 'Notificaciones en el celular'), info, btns, out);
+  const draw = async () => {
+    btns.replaceChildren();
+    msg(out, '', '');
+    if (!pushSupported()) { info.textContent = 'Este navegador no admite notificaciones. En el celular, abrí la app desde Chrome.'; return; }
+    const st = await api('/api/push/status').catch(() => null);
+    if (!st || !st.configured) { info.textContent = 'Las notificaciones todavía no están disponibles.'; return; }
+    if (Notification.permission === 'denied') { info.textContent = 'Bloqueaste las notificaciones de este sitio. Habilitalas desde la configuración del navegador y volvé acá.'; return; }
+    const sub = await currentPushSub().catch(() => null);
+    if (sub) {
+      info.textContent = 'Activadas en este dispositivo. Te avisamos cuando la búsqueda de la mañana trae ofertas nuevas.';
+      btns.append(
+        action('Enviar una prueba', async () => {
+          try { await api('/api/push/test', { method: 'POST' }); msg(out, 'Listo: en unos segundos tendría que llegarte el aviso.', 'ok'); }
+          catch (e) { msg(out, e.message, 'err'); }
+        }), ' ',
+        action('Desactivar', async () => {
+          try {
+            const s = await currentPushSub();
+            if (s) { await api('/api/push/unsubscribe', { method: 'POST', body: { endpoint: s.endpoint } }).catch(() => {}); await s.unsubscribe(); }
+            await draw();
+          } catch (e) { msg(out, e.message, 'err'); }
+        }));
+    } else {
+      info.textContent = 'Recibí un aviso en el celular cuando la búsqueda de la mañana encuentre ofertas nuevas.';
+      btns.append(action('Activar notificaciones', async () => {
+        try {
+          const perm = await Notification.requestPermission();
+          if (perm !== 'granted') { msg(out, 'No diste permiso para las notificaciones.', 'err'); return; }
+          const { key } = await api('/api/push/key');
+          if (!key) { msg(out, 'Las notificaciones todavía no están disponibles.', 'err'); return; }
+          const reg = await navigator.serviceWorker.ready;
+          const s = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyToBytes(key) });
+          await api('/api/push/subscribe', { method: 'POST', body: { endpoint: s.endpoint } });
+          await draw();
+          msg(out, 'Activadas. Podés enviarte una prueba.', 'ok');
+        } catch (e) { msg(out, e.message || 'No se pudieron activar las notificaciones.', 'err'); }
+      }, 'primary'));
+    }
+  };
+  draw();
+  return card;
+}
+
 function topBar() {
   const right = h('div', { class: 'right' }, arrepentimientoBtn());
   if (window.lmhInstall && window.lmhInstall.canPrompt()) right.append(h('button', { onclick: () => window.lmhInstall.prompt() }, 'Instalar app'));
@@ -465,6 +518,7 @@ function viewProfile() {
       p.cv_name ? h('p', {}, h('button', { onclick: async () => { try { await api('/api/cv/reanalyze', { method: 'POST' }); await refreshMe(); location.hash = '#/ofertas'; } catch (e) { alert(e.message); } } }, 'Volver a analizar el CV')) : null),
     h('div', { class: 'card' }, h('h2', {}, 'Qué estoy buscando'), prefsForm(p)),
     h('div', { class: 'card' }, h('h2', {}, 'Mi búsqueda propia'), customBlockForm(p)),
+    pushCard(),
     subscriptionCard(),
     h('div', { class: 'card' }, h('h2', {}, 'Mi cuenta'), h('p', { class: 'muted' }, state.user.email),
       h('p', {}, h('button', { class: 'danger', onclick: del }, 'Borrar mi cuenta y mis datos'))));
@@ -517,6 +571,7 @@ function viewHelp() {
       h('li', {}, 'Desconfiá de los avisos que te piden plata o datos bancarios: una búsqueda real nunca los necesita.'))),
     sec('Seguimiento de postulaciones', h('p', {}, 'En Enviadas anotá novedades y elegí una fecha para volver a contactar.')),
     sec('Actualización diaria', h('p', {}, 'Todos los días después de las 7:00 (hora de Argentina) actualizamos tus bloques con ofertas de los últimos 15 días, sin repetir lo que ya está en tu lista. También podés tocar “Actualizar ahora” (hasta 4 veces por día).')),
+    sec('Notificaciones en el celular', h('p', {}, 'En Mi perfil, tocá “Activar notificaciones” y aceptá el permiso. Cuando la búsqueda de la mañana encuentra ofertas nuevas, te llega un aviso al celular; al tocarlo se abre la lista. Si no hay ofertas nuevas, no te molestamos. Podés desactivarlas cuando quieras.')),
     sec('Portales que no se pueden leer automáticamente', h('p', {}, 'Bumeran, Computrabajo, LinkedIn y ZonaJobs bloquean la lectura automática. En cada bloque tenés enlaces directos con tu búsqueda ya armada para abrirlos con un toque.')),
     sec('Tus datos', h('p', {}, 'Podés borrar tu cuenta y todos tus datos (incluido el CV) desde Mi perfil. Más detalles en la Política de Privacidad. Los avisos pertenecen a sus portales: confirmá modalidad y sueldo antes de postularte.')),
     sec('Prueba gratuita y suscripción', h('p', {}, 'Tenés 3 días de prueba gratis, sin tarjeta. Después la suscripción cuesta $ 10.000 por mes: se cobra al suscribirte y se renueva sola cada mes con Mercado Pago. Podés cancelarla cuando quieras desde Mi perfil → Mi suscripción y seguís usando el servicio hasta el final del período pago.')),

@@ -3,6 +3,7 @@ import { sha256, nowSec, todayART, safeJsonParse } from './util.js';
 import { blocksOf } from './ai.js';
 import { CONNECTORS } from './sources.js';
 import { hasAccess } from './billing.js';
+import { notifyUser } from './push.js';
 
 export const MAX_AGE_DAYS = 15;
 const MAX_NEW_PER_BLOCK = 15;
@@ -146,7 +147,10 @@ export async function runDailySweep(env) {
         await env.DB.prepare('UPDATE profiles SET last_sweep_date = ?, last_sweep_at = ? WHERE user_id = ?').bind(today, nowSec(), row.user_id).run();
         continue;
       }
-      await sweepUser(env, row.user_id, { today });
+      const result = await sweepUser(env, row.user_id, { today });
+      // Aviso al celular solo si la búsqueda de la mañana trajo ofertas nuevas.
+      const nuevas = Object.values(result?.added ?? {}).reduce((a, n) => a + n, 0);
+      if (nuevas > 0) await notifyUser(env, row.user_id).catch((err) => console.error(JSON.stringify({ evt: 'push_error', userId: row.user_id, msg: String(err?.message || err) })));
     } catch (err) {
       console.error(JSON.stringify({ evt: 'sweep_error', userId: row.user_id, msg: String(err?.message || err) }));
       await env.DB.prepare('UPDATE profiles SET last_sweep_date = ?, last_sweep_at = ? WHERE user_id = ?').bind(today, nowSec(), row.user_id).run();
